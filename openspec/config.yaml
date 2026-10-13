@@ -1,0 +1,29 @@
+schema: spec-driven
+
+context: |
+  Project: spotify-helper, a Go CLI that controls Spotify through the Web API.
+  Consumer: a Noctalia v5 widget plugin (Luau) that runs the binary via
+  noctalia.runAsync and parses its JSON stdout. The CLI<->plugin JSON output is
+  a stable contract; changing it is a breaking change and must be called out.
+  Stack: Go (standard library only unless there is a strong reason), Spotify
+  Web API, OAuth 2.0 Authorization Code with PKCE (no client secret).
+  Auth: user's own client_id; loopback redirect http://127.0.0.1:8888/callback;
+  scopes user-read-playback-state user-modify-playback-state
+  user-read-currently-playing playlist-read-private user-library-read.
+  Constraints: Spotify Development Mode (Premium owner, search limit 10,
+  some catalog endpoints removed, HTTP 429 with Retry-After must be respected,
+  no automatic retries). Playback runs on a Connect device, so state and control
+  must go through the Web API, never MPRIS.
+  Output: JSON on stdout; errors as JSON on stderr with a non-zero exit code.
+  Never print tokens or client_id values in output or logs.
+  Language: all OpenSpec artifacts in English; other project docs in Russian.
+
+rules:
+  proposal:
+    - Include a "Non-goals" section
+    - State whether the change alters the JSON output contract
+  specs:
+    - Describe output as concrete JSON field names and types
+    - Cover error cases (not authenticated, no active device, HTTP 429, non-Premium)
+  tasks:
+    - Each task is verifiable with `go test ./...` or a documented manual check
