@@ -61,7 +61,7 @@ Before sending a request, the helper SHALL refresh the access token when it expi
 - **THEN** both complete and the stored refresh token is valid afterwards
 
 ### Requirement: Missing or foreign tokens require login
-Commands other than `login`, `logout` and `version` SHALL fail with `not_authenticated` when no token file exists, when it is unreadable, or when it was issued for a different client ID than the configured one.
+Commands that call the Spotify API (every command except `login`, `logout`, `version`, `doctor`, `cover` and `--help`) SHALL fail with `not_authenticated` when no token file exists, when it is unreadable, or when it was issued for a different client ID than the configured one.
 
 #### Scenario: Client ID changed
 - **WHEN** the configured client ID differs from the one recorded in `token.json`

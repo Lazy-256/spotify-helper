@@ -35,13 +35,19 @@ exits. See `proposal.md` for the motivation. Constraints that shape the design:
 ## Decisions
 
 ### Layout and CLI parsing
-`cmd/spotify-helper/main.go` dispatches the first argument to a command
-function; each command owns a `flag.FlagSet`. Packages: `internal/auth`
-(config, PKCE, token store, refresh), `internal/api` (HTTP client, Spotify
-endpoints, wire→output mapping), `internal/covers` (image cache),
-`internal/doctor` (offline report), `internal/output` (output types, `Error`
-type with code/message/retry_after, exit-code table, JSON writers).
-*Alternative:* cobra/urfave — rejected, ~18 flat commands do not justify a
+`cmd/spotify-helper/main.go` only calls `cli.Run`. `internal/cli` registers the
+subcommands (each owns a `flag.FlagSet`; a small `parseArgs` accepts flags and
+positionals in any order and treats `-10` as a number) and holds `Env`, the one
+struct through which streams, environment, clock, HTTP clients and the browser
+reach the commands, so tests substitute all of them. Packages:
+`internal/config` (XDG paths, config file), `internal/auth` (PKCE, callback
+listener, token endpoint, token store, refresh manager), `internal/api` (HTTP
+client, Spotify endpoints, wire→output mapping), `internal/covers` (image
+cache), `internal/doctor` (offline report), `internal/ratelimit` (cooldown
+file), `internal/fileutil` (atomic write, flock), `internal/spotifyuri`
+(URI/link parser) and `internal/output` (contract types, `Error`, exit codes,
+JSON writers).
+*Alternative:* cobra/urfave — rejected, ~22 flat commands do not justify a
 dependency.
 
 ### One error type, one exit path
@@ -162,8 +168,10 @@ endpoints still exist, search cap) can only be confirmed against Spotify.
 - [Polling `state` from the plugin trips rate limits] → the cooldown file
   turns a limit into a cheap local failure and surfaces `retry_after` so the
   plugin can back off; recommended polling interval is documented in README.
-- [No daemon means TLS + process start per call] → measured cost is far below
-  the 24–60 s of the `spotify_player` CLI; revisit only if the plugin needs
+- [No daemon means TLS + process start per call] → expected to be far below
+  the 24–60 s measured for the `spotify_player` CLI (which logs in on every
+  call). Measured on a real account: 100–160 ms for `state`, `devices` and
+  `queue`, 100–500 ms for control commands; revisit only if the plugin needs
   sub-second updates.
 - [Hand-written config parser accepts less than full TOML] → documented as a
   strict subset; unsupported syntax fails loudly.

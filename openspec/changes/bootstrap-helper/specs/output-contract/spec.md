@@ -16,11 +16,15 @@ Every command that succeeds SHALL exit with code 0 and write exactly one JSON ob
 - **THEN** that text is written to stderr, not stdout
 
 ### Requirement: Failures are a JSON error on stderr
-When a command fails it SHALL write nothing to stdout, write exactly one JSON object `{"error":{"code":"<code>","message":"<text>"}}` followed by a newline to stderr, and exit with a non-zero code. `code` SHALL be one of a fixed set of lowercase snake_case identifiers; `message` SHALL be human-readable English and SHALL NOT be relied upon by callers.
+When a command fails it SHALL write nothing to stdout, write exactly one JSON object `{"error":{"code":"<code>","message":"<text>"}}` followed by a newline to stderr, and exit with a non-zero code. `code` SHALL be one of a fixed set of lowercase snake_case identifiers; `message` SHALL be human-readable English and SHALL NOT be relied upon by callers. The error object SHALL be the last line of stderr. Only the interactive `login` command MAY print human-readable lines before it (the authorization URL); every other command writes nothing but the error object to stderr.
 
 #### Scenario: Failure shape
 - **WHEN** any command fails
-- **THEN** stdout is empty, stderr holds one JSON object with `error.code` and `error.message`, and the exit code is non-zero
+- **THEN** stdout is empty, the last line of stderr is one JSON object with `error.code` and `error.message`, and the exit code is non-zero
+
+#### Scenario: Non-interactive commands keep stderr clean
+- **WHEN** a command other than `login` fails
+- **THEN** stderr holds exactly one line, the JSON error object
 
 ### Requirement: Error codes map to exit codes
 The helper SHALL use these error codes and exit codes:
@@ -66,11 +70,15 @@ Every HTTP request to Spotify SHALL have a timeout. A timeout or connection fail
 - **THEN** the command exits 7 with `error.code` `network_error`
 
 ### Requirement: Secrets are never printed
-The helper SHALL NOT write access tokens, refresh tokens, authorization codes, PKCE verifiers or the configured `client_id` to stdout, stderr (including error messages) or log output.
+The helper SHALL NOT write access tokens, refresh tokens, authorization codes, PKCE verifiers or the configured `client_id` to stdout, stderr (including error messages) or log output. The single exception is the authorization URL that `login` prints to stderr for the user to open, which carries the client ID as a query parameter by necessity.
 
 #### Scenario: Failed token refresh
 - **WHEN** a token refresh fails
 - **THEN** the error message contains no token value
+
+#### Scenario: Login URL
+- **WHEN** `login` prints the authorization URL
+- **THEN** it is the only output that contains the client ID, and it goes to stderr
 
 ### Requirement: Output field names are a stable contract
 Documented JSON field names and types SHALL NOT be renamed, retyped or removed without declaring the change breaking. New fields MAY be added at any time, and callers SHALL ignore fields they do not know.

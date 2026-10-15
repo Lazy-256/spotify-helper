@@ -71,7 +71,7 @@ For an episode, `artists` SHALL be empty and `album` SHALL describe the show.
 - **THEN** the command exits 2 with `error.code` `usage`
 
 ### Requirement: Seek
-`spotify-helper seek <position>` SHALL accept an absolute position in milliseconds, or a signed relative offset such as `+10000` or `-5000` applied to the current progress. The resulting position SHALL be clamped to the range from 0 to the item's duration. Output SHALL be `{"ok":true,"position_ms":<int>}`.
+`spotify-helper seek <position>` SHALL accept an absolute position in milliseconds, or a signed relative offset such as `+10000` or `-5000` applied to the current progress. The resulting position SHALL be clamped to the range from 0 to one second before the end of the item (the duration minus 1000 ms, or 0 for an item shorter than that), so that a seek never ends the item; when the duration is unknown there SHALL be no upper limit. Output SHALL be `{"ok":true,"position_ms":<int>}` with the applied position.
 
 #### Scenario: Skip back past the start
 - **WHEN** progress is 3000 ms and the user runs `seek -5000`
@@ -80,6 +80,14 @@ For an episode, `artists` SHALL be empty and `album` SHALL describe the show.
 #### Scenario: Absolute seek
 - **WHEN** the user runs `seek 60000`
 - **THEN** playback continues from 60000 ms
+
+#### Scenario: Seek past the end
+- **WHEN** an item lasts 200000 ms and the user runs `seek +50000` at 190000 ms, or `seek 999999`
+- **THEN** the position is set to 199000 and the item keeps playing
+
+#### Scenario: Very short item
+- **WHEN** an item lasts 800 ms and the user runs `seek 5000`
+- **THEN** the position is set to 0
 
 ### Requirement: Shuffle and repeat
 `shuffle` SHALL accept `on`, `off` or `toggle` and `repeat` SHALL accept `off`, `context`, `track` or `cycle` (off → context → track → off). Output SHALL be `{"ok":true,"shuffle":<bool>}` and `{"ok":true,"repeat":"<mode>"}` respectively, holding the applied value. Any other argument SHALL fail with `usage`.

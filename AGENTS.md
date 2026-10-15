@@ -51,37 +51,55 @@ CLI-хелпер на Go для управления Spotify через Web API.
 
 | Путь | Назначение |
 |------|------------|
-| `$XDG_CONFIG_HOME/spotify-helper/config.toml` | `client_id`, redirect URI |
-| `$XDG_CONFIG_HOME/spotify-helper/token.json` | access/refresh токены, права `0600` |
-| `$XDG_CACHE_HOME/spotify-helper/` | кэш обложек и пр. |
+| `$XDG_CONFIG_HOME/spotify-helper/config.toml` | `client_id`, `redirect_uri` |
+| `$XDG_CONFIG_HOME/spotify-helper/token.json` | access/refresh токены и `client_id`, права `0600`, каталог `0700` |
+| `$XDG_CONFIG_HOME/spotify-helper/token.lock` | `flock`, чтобы параллельные процессы не обновляли токен дважды |
+| `$XDG_CACHE_HOME/spotify-helper/rate-limit.json` | пауза после HTTP 429 |
+| `$XDG_CACHE_HOME/spotify-helper/covers/` | кэш обложек (2 МиБ на файл, 30 дней, 100 МиБ) |
 
 Токены и `client_id` пользователя не коммитить (см. `.gitignore`).
 
-## Структура (планируемая)
+## Структура
 
 ```
-cmd/spotify-helper/   точка входа, разбор подкоманд
-internal/auth/        PKCE, локальный callback-сервер, хранение и обновление токена
-internal/api/         клиент Web API (player, search, queue, devices), лимиты и 429
-internal/output/      JSON-контракт: типы ответов и ошибок
-openspec/             спеки и изменения (на английском)
+cmd/spotify-helper/    main: только cli.Run
+internal/cli/          подкоманды, Env (потоки, окружение, часы, HTTP, браузер), разбор аргументов
+internal/config/       XDG-пути, config.toml (подмножество TOML), client_id
+internal/auth/         PKCE, callback-сервер, token endpoint, хранилище токена, обновление под flock
+internal/api/          клиент Web API, маппинг ошибок, wire → типы вывода, player/search/queue/library
+internal/covers/       кэш обложек и пост-обработка --covers
+internal/doctor/       офлайн-отчёт
+internal/ratelimit/    кулдаун после 429 на диске
+internal/fileutil/     атомарная запись, flock
+internal/spotifyuri/   разбор spotify:… и ссылок open.spotify.com
+internal/output/       контракт: типы вывода, Error, коды выхода, JSON-писатели
+openspec/              спеки и изменения (на английском)
 ```
+
+Правила кода:
+- Тестируемость через `cli.Env`: все обращения наружу идут через него; тесты
+  подменяют Spotify на `httptest`, каталоги — на `t.TempDir()` через XDG-переменные.
+- Ошибки наружу — только `*output.Error`; печатает их один `cli.Run`.
+- Типы вывода — это контракт с плагином (`internal/output/model.go`); поля wire
+  Spotify в них не просачиваются, см. `internal/api/wire.go`.
+- Запросы за картинками идут отдельным `Env.CoverHTTP`, без токена.
 
 ## Работа через OpenSpec
 
 Изменения поведения идут через OpenSpec: `/opsx:propose` → `/opsx:apply` →
-`/opsx:archive`. Начальное изменение — `bootstrap-helper`. Мелкие правки без
-смены поведения — обычными коммитами.
+`/opsx:archive`. Начальное изменение — `bootstrap-helper` (активно, ждёт
+проверки на реальном аккаунте). Мелкие правки без смены поведения — обычными
+коммитами.
 
 ## Команды
 
 ```bash
 go build -o bin/spotify-helper ./cmd/spotify-helper
-go test ./...
+go test -race ./...
 go vet ./...
+gofmt -l .
 ```
 
 ## Открытые вопросы
 
-- Значение `client_id` (создаёт пользователь в дашборде).
-- Нужен ли режим демона/кэша состояния, или плагин сам опрашивает `state`.
+- Режим демона не нужен: вызов занимает 100–500 мс (измерено на реальном аккаунте).
