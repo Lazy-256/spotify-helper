@@ -52,6 +52,14 @@ go test ./...
 go vet ./...
 ```
 
+### Установка в `~/.local/bin`
+
+Плагину нужен бинарник в `PATH`. Версия берётся из коммита:
+
+```bash
+go build -ldflags "-X github.com/Lazy-256/spotify-helper/internal/cli.Version=0.1.0+$(git rev-parse --short HEAD)" -o ~/.local/bin/spotify-helper ./cmd/spotify-helper
+```
+
 ## Команды
 
 Флаги можно ставить где угодно: `search daft punk --type artist`. Отрицательные
