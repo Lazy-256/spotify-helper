@@ -100,7 +100,7 @@ go build -ldflags "-X github.com/Lazy-256/spotify-helper/internal/cli.Version=0.
   "active": true, "is_playing": true,
   "progress_ms": 250343, "fetched_at_ms": 1791903029671,
   "shuffle": true, "repeat": "off",
-  "device": {"id": "…", "name": "la-box", "type": "Speaker",
+  "device": {"id": "…", "name": "Living Room", "type": "Speaker",
              "is_active": true, "is_restricted": false, "volume_percent": 93},
   "context": {"type": "playlist", "uri": "spotify:playlist:…"},
   "item": {"type": "track", "uri": "spotify:track:…", "id": "…", "name": "…",
@@ -186,7 +186,7 @@ Spotify.
 ## Проверка на реальном аккаунте
 
 Автотесты работают с фейковым Spotify, поэтому один раз всё прогнали на живом
-аккаунте (Premium, режим разработки, 2026-10-15). Колонка Connect `la-box`
+аккаунте (Premium, режим разработки, 2026-10-15). Колонка Connect `Living Room`
 (hifiberry, сервис `spotify-soloist`) и Web Player в Firefox.
 
 - [x] `login` проходит, `doctor` → `ok:true`
@@ -217,7 +217,7 @@ Spotify.
 - **Spotify отказывает с 403 «Restriction violated»**, когда текущая сессия не
   допускает команду (например, `next` в конце списка, `seek` в зависшей сессии).
   Хелпер отдаёт это как `api_error` с HTTP-статусом в сообщении.
-- **`seek` в самый конец завершает трек.** После такой перемотки на `la-box` сессия
+- **`seek` в самый конец завершает трек.** После такой перемотки на `Living Room` сессия
   зависла: команды принимались (204), но не выполнялись, а после перезапуска сервиса
   старое состояние восстановилось. Причинная связь не доказана, поэтому хелпер
   ограничивает позицию значением «длительность минус 1 секунда» и трек не завершает.
