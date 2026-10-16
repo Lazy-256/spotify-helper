@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/Lazy-256/spotify-helper/internal/fileutil"
@@ -53,6 +54,20 @@ func (m *Manager) AccessToken(ctx context.Context) (string, error) {
 		return "", output.Errorf(output.CodeInternal, "cannot store the refreshed token: %v", describe(err))
 	}
 	return nt.AccessToken, nil
+}
+
+// RequireScope fails with scopes_missing when the stored token was not granted
+// scope, so a command can tell the user to log in again instead of sending a
+// request Spotify will refuse. A missing or foreign token is not_authenticated.
+func (m *Manager) RequireScope(scope string) error {
+	t, err := m.Store.Load(m.Endpoint.ClientID)
+	if err != nil {
+		return err
+	}
+	if !slices.Contains(t.Scopes, scope) {
+		return output.Errorf(output.CodeScopesMissing, "the stored login lacks the %s permission; run `spotify-helper login` again", scope)
+	}
+	return nil
 }
 
 func (m *Manager) fresh(t *Token) bool {

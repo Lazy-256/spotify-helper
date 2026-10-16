@@ -61,7 +61,7 @@ func TestAuthorizeURL(t *testing.T) {
 		"client_id": "CID", "response_type": "code",
 		"redirect_uri":          "http://127.0.0.1:8888/callback",
 		"code_challenge_method": "S256", "code_challenge": "CH", "state": "ST",
-		"scope": "user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private user-library-read",
+		"scope": "user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private user-library-read user-library-modify",
 	}
 	for k, v := range want {
 		if q.Get(k) != v {

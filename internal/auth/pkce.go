@@ -17,7 +17,12 @@ var Scopes = []string{
 	"user-read-currently-playing",
 	"playlist-read-private",
 	"user-library-read",
+	ScopeLibraryModify,
 }
+
+// ScopeLibraryModify lets save and unsave change the user's library. Tokens
+// issued before it was requested lack it; see Manager.RequireScope.
+const ScopeLibraryModify = "user-library-modify"
 
 var b64 = base64.RawURLEncoding
 

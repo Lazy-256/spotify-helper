@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/Lazy-256/spotify-helper/internal/auth"
 )
 
 const playlistsFixture = `{"total":3,"limit":50,"offset":0,"items":[
@@ -132,5 +134,181 @@ func TestLibraryWithCovers(t *testing.T) {
 	albums := parse(t, runOK(t, env, out, errb, "albums", "--covers"))["albums"].([]any)
 	if p, _ := albums[0].(map[string]any)["cover_path"].(string); p == "" {
 		t.Errorf("album cover_path: %v", albums[0])
+	}
+}
+
+// ---- save, unsave, saved ----
+
+// withScopes replaces the stored token's scopes.
+func withScopes(t *testing.T, env *Env, scopes []string) {
+	t.Helper()
+	store := &auth.Store{Path: tokenPath(env)}
+	if err := store.Save(&auth.Token{AccessToken: "TOKEN-VALUE", RefreshToken: "REFRESH-VALUE",
+		ExpiresAt: env.Now().Unix() + 3600, ClientID: "test-client-id", Scopes: scopes}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSaveTrack(t *testing.T) {
+	env, f, out, errb := spotifyEnv(t)
+	f.reply("PUT /me/library", 200, "")
+	got := runOK(t, env, out, errb, "save", "spotify:track:abc")
+	if got != "{\"ok\":true,\"uri\":\"spotify:track:abc\"}\n" {
+		t.Errorf("got %q", got)
+	}
+	calls := f.callsTo("PUT /me/library")
+	if len(calls) != 1 || calls[0].Query.Get("uris") != "spotify:track:abc" {
+		t.Errorf("calls: %+v", calls)
+	}
+}
+
+func TestSaveFromWebLinkAndEpisode(t *testing.T) {
+	env, f, out, errb := spotifyEnv(t)
+	f.reply("PUT /me/library", 200, "")
+	res := parse(t, runOK(t, env, out, errb, "save", "https://open.spotify.com/track/abc?si=xyz"))
+	if res["uri"] != "spotify:track:abc" {
+		t.Errorf("link must be normalized: %v", res)
+	}
+	res = parse(t, runOK(t, env, out, errb, "save", "spotify:episode:ep1"))
+	if res["uri"] != "spotify:episode:ep1" {
+		t.Errorf("episode: %v", res)
+	}
+}
+
+func TestSaveNeedsNoDevice(t *testing.T) {
+	env, f, out, errb := spotifyEnv(t)
+	f.reply("PUT /me/library", 200, "")
+	f.reply("GET /me/player", 204, "")
+	runOK(t, env, out, errb, "save", "spotify:track:abc")
+	if n := len(f.callsTo("GET /me/player")); n != 0 {
+		t.Errorf("save must not look at the player, %d calls", n)
+	}
+}
+
+func TestUnsaveTrack(t *testing.T) {
+	env, f, out, errb := spotifyEnv(t)
+	f.reply("DELETE /me/library", 200, "")
+	got := runOK(t, env, out, errb, "unsave", "spotify:track:abc")
+	if got != "{\"ok\":true,\"uri\":\"spotify:track:abc\"}\n" {
+		t.Errorf("got %q", got)
+	}
+	if c := f.callsTo("DELETE /me/library"); len(c) != 1 || c[0].Query.Get("uris") != "spotify:track:abc" {
+		t.Errorf("calls: %+v", c)
+	}
+}
+
+func TestSaveRejectsOtherKinds(t *testing.T) {
+	for _, cmd := range []string{"save", "unsave", "saved"} {
+		for _, arg := range []string{"spotify:album:abc", "spotify:playlist:abc", "spotify:artist:abc", "hello"} {
+			env, f, out, errb := spotifyEnv(t)
+			runFail(t, env, out, errb, 2, "usage", cmd, arg)
+			if f.total() != 0 {
+				t.Errorf("%s %s: a request was sent", cmd, arg)
+			}
+		}
+		env, f, out, errb := spotifyEnv(t)
+		runFail(t, env, out, errb, 2, "usage", cmd)
+		runFail(t, env, out, errb, 2, "usage", cmd, "spotify:track:a", "spotify:track:b")
+		if f.total() != 0 {
+			t.Errorf("%s: a request was sent for a bad argument count", cmd)
+		}
+	}
+}
+
+func TestSaveMissingScope(t *testing.T) {
+	old := []string{"user-read-playback-state", "user-library-read"}
+	for _, cmd := range []string{"save", "unsave"} {
+		env, f, out, errb := spotifyEnv(t)
+		withScopes(t, env, old)
+		runFail(t, env, out, errb, 3, "scopes_missing", cmd, "spotify:track:abc")
+		if f.total() != 0 {
+			t.Errorf("%s: a request was sent without the scope", cmd)
+		}
+		if strings.Contains(errb.String(), "TOKEN-VALUE") {
+			t.Errorf("%s: the error leaks the token", cmd)
+		}
+	}
+}
+
+func TestBadURIWinsOverMissingScope(t *testing.T) {
+	env, _, out, errb := spotifyEnv(t)
+	withScopes(t, env, []string{"user-library-read"})
+	runFail(t, env, out, errb, 2, "usage", "save", "spotify:album:abc")
+}
+
+func TestSaveNotLoggedIn(t *testing.T) {
+	env, f, out, errb := spotifyEnv(t)
+	if err := removeFile(tokenPath(env)); err != nil {
+		t.Fatal(err)
+	}
+	runFail(t, env, out, errb, 3, "not_authenticated", "save", "spotify:track:abc")
+	if f.total() != 0 {
+		t.Error("a request was sent without a token")
+	}
+}
+
+func TestSaveSpotifyRefuses(t *testing.T) {
+	env, f, out, errb := spotifyEnv(t)
+	f.reply("PUT /me/library", 403, `{"error":{"status":403,"message":"Forbidden"}}`)
+	runFail(t, env, out, errb, 1, "api_error", "save", "spotify:track:abc")
+}
+
+func TestSaved(t *testing.T) {
+	for _, tt := range []struct {
+		body string
+		want string
+	}{
+		{`[true]`, "{\"uri\":\"spotify:track:abc\",\"saved\":true}\n"},
+		{`[false]`, "{\"uri\":\"spotify:track:abc\",\"saved\":false}\n"},
+	} {
+		env, f, out, errb := spotifyEnv(t)
+		f.reply("GET /me/library/contains", 200, tt.body)
+		if got := runOK(t, env, out, errb, "saved", "spotify:track:abc"); got != tt.want {
+			t.Errorf("%s: got %q", tt.body, got)
+		}
+		if c := f.callsTo("GET /me/library/contains"); len(c) != 1 || c[0].Query.Get("uris") != "spotify:track:abc" {
+			t.Errorf("calls: %+v", c)
+		}
+	}
+}
+
+func TestSavedNeedsOnlyTheReadScope(t *testing.T) {
+	env, f, out, errb := spotifyEnv(t)
+	withScopes(t, env, []string{"user-library-read"})
+	f.reply("GET /me/library/contains", 200, `[true]`)
+	res := parse(t, runOK(t, env, out, errb, "saved", "spotify:track:abc"))
+	if res["saved"] != true {
+		t.Errorf("got %v", res)
+	}
+}
+
+func TestSavedUnexpectedAnswer(t *testing.T) {
+	for _, body := range []string{`[]`, `[true,false]`, `{"saved":true}`, `["yes"]`, ``} {
+		env, f, out, errb := spotifyEnv(t)
+		f.reply("GET /me/library/contains", 200, body)
+		runFail(t, env, out, errb, 1, "api_error", "saved", "spotify:track:abc")
+	}
+}
+
+func TestSavedRateLimited(t *testing.T) {
+	env, f, out, errb := spotifyEnv(t)
+	f.on("GET /me/library/contains", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Retry-After", "7")
+		w.WriteHeader(429)
+	})
+	runFail(t, env, out, errb, 5, "rate_limited", "saved", "spotify:track:abc")
+	if res := parse(t, strings.TrimRight(errb.String(), "\n")); res["error"].(map[string]any)["retry_after"] != float64(7) {
+		t.Errorf("stderr: %s", errb.String())
+	}
+}
+
+func TestLibraryCommandsInHelp(t *testing.T) {
+	env, out, errb := testEnv(t)
+	Run([]string{"--help"}, env)
+	text := out.String() + errb.String()
+	for _, name := range []string{"save ", "unsave ", "saved "} {
+		if !strings.Contains(text, name) {
+			t.Errorf("--help does not list %q:\n%s", name, text)
+		}
 	}
 }

@@ -9,7 +9,7 @@ context: |
   Web API, OAuth 2.0 Authorization Code with PKCE (no client secret).
   Auth: user's own client_id; loopback redirect http://127.0.0.1:8888/callback;
   scopes user-read-playback-state user-modify-playback-state
-  user-read-currently-playing playlist-read-private user-library-read.
+  user-read-currently-playing playlist-read-private user-library-read user-library-modify.
   Constraints: Spotify Development Mode (Premium owner, search limit 10,
   some catalog endpoints removed, HTTP 429 with Retry-After must be respected,
   no automatic retries). Playback runs on a Connect device, so state and control

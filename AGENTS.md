@@ -35,7 +35,8 @@ CLI-хелпер на Go для управления Spotify через Web API.
   `http://127.0.0.1:8888/callback` (именно `127.0.0.1`, не `localhost`; порт
   фиксированный, должен совпадать посимвольно).
 - Scopes: `user-read-playback-state user-modify-playback-state
-  user-read-currently-playing playlist-read-private user-library-read`.
+  user-read-currently-playing playlist-read-private user-library-read
+  user-library-modify`.
 - Только стандартная библиотека Go, пока нет веской причины тащить зависимость.
 - Вывод — JSON в stdout; ошибки — JSON в stderr и ненулевой код выхода.
   Формат — контракт с плагином (см. спеки в `openspec/specs/`).

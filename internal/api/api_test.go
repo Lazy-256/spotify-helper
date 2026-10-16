@@ -12,8 +12,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Lazy-256/spotify-helper/internal/auth"
 	"github.com/Lazy-256/spotify-helper/internal/output"
 	"github.com/Lazy-256/spotify-helper/internal/ratelimit"
+	"github.com/Lazy-256/spotify-helper/internal/spotifyuri"
 )
 
 type fixedToken string
@@ -356,5 +358,81 @@ func TestMapPlaylistOwnerFallback(t *testing.T) {
 	}{ID: "spotify"}})
 	if e.OwnerName != "spotify" {
 		t.Errorf("owner %q", e.OwnerName)
+	}
+}
+
+func TestLibraryWritesSendTheURI(t *testing.T) {
+	u, _ := spotifyuri.Parse("spotify:track:abc")
+	for _, tt := range []struct {
+		method string
+		call   func(*Client) error
+	}{
+		{http.MethodPut, func(c *Client) error { return c.SaveItem(context.Background(), u) }},
+		{http.MethodDelete, func(c *Client) error { return c.RemoveItem(context.Background(), u) }},
+	} {
+		c, n, _ := newClient(t, func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != tt.method || r.URL.Path != "/v1/me/library" || r.URL.Query().Get("uris") != "spotify:track:abc" {
+				t.Errorf("request %s %s", r.Method, r.URL.String())
+			}
+			w.WriteHeader(200)
+		})
+		if err := tt.call(c); err != nil || n.Load() != 1 {
+			t.Errorf("%s: err %v, %d requests", tt.method, err, n.Load())
+		}
+	}
+}
+
+// scopedToken is a token source that also knows its scopes.
+type scopedToken struct {
+	fixedToken
+	scopes []string
+}
+
+func (s scopedToken) RequireScope(scope string) error {
+	for _, have := range s.scopes {
+		if have == scope {
+			return nil
+		}
+	}
+	return output.Errorf(output.CodeScopesMissing, "lacks %s", scope)
+}
+
+func TestLibraryWriteWithoutScopeSendsNothing(t *testing.T) {
+	u, _ := spotifyuri.Parse("spotify:track:abc")
+	c, n, _ := newClient(t, func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) })
+	c.Tokens = scopedToken{"TOK", []string{"user-library-read"}}
+	for _, err := range []error{c.SaveItem(context.Background(), u), c.RemoveItem(context.Background(), u)} {
+		if oe := asErr(t, err); oe.Code != output.CodeScopesMissing {
+			t.Errorf("got %+v", oe)
+		}
+	}
+	if n.Load() != 0 {
+		t.Errorf("%d requests were sent", n.Load())
+	}
+	c.Tokens = scopedToken{"TOK", []string{auth.ScopeLibraryModify}}
+	if err := c.SaveItem(context.Background(), u); err != nil || n.Load() != 1 {
+		t.Errorf("with the scope: err %v, %d requests", err, n.Load())
+	}
+}
+
+func TestItemSaved(t *testing.T) {
+	u, _ := spotifyuri.Parse("spotify:track:abc")
+	for body, want := range map[string]bool{`[true]`: true, `[false]`: false} {
+		c, _, _ := newClient(t, func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodGet || r.URL.Path != "/v1/me/library/contains" || r.URL.Query().Get("uris") != "spotify:track:abc" {
+				t.Errorf("request %s %s", r.Method, r.URL.String())
+			}
+			jsonReply(w, 200, body)
+		})
+		if got, err := c.ItemSaved(context.Background(), u); err != nil || got != want {
+			t.Errorf("%s: got %v, %v", body, got, err)
+		}
+	}
+	for _, body := range []string{`[]`, `[true,true]`, `{"a":1}`, ``} {
+		c, _, _ := newClient(t, func(w http.ResponseWriter, r *http.Request) { jsonReply(w, 200, body) })
+		_, err := c.ItemSaved(context.Background(), u)
+		if oe := asErr(t, err); oe.Code != output.CodeAPIError {
+			t.Errorf("%q: got %+v", body, oe)
+		}
 	}
 }

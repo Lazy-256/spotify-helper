@@ -181,3 +181,17 @@ func TestDoctorNeverPrintsSecrets(t *testing.T) {
 		t.Errorf("env source: %s", out.String())
 	}
 }
+
+// A token issued before user-library-modify existed has every older scope.
+func TestDoctorTokenFromBeforeLibraryModify(t *testing.T) {
+	env, _, out, errb := spotifyEnv(t)
+	old := []string{"user-read-playback-state", "user-modify-playback-state", "user-read-currently-playing",
+		"playlist-read-private", "user-library-read"}
+	store := &auth.Store{Path: tokenPath(env)}
+	_ = store.Save(&auth.Token{AccessToken: "A", RefreshToken: "R", ExpiresAt: env.Now().Unix() + 100,
+		ClientID: "test-client-id", Scopes: old})
+	rep := parse(t, runOK(t, env, out, errb, "doctor"))
+	if got := problems(t, rep); !slices.Equal(got, []string{"scopes_missing"}) {
+		t.Errorf("problems: %v", got)
+	}
+}

@@ -19,6 +19,7 @@ func TestExitCodes(t *testing.T) {
 		{CodeUsage, 2},
 		{CodeNotConfigured, 3},
 		{CodeNotAuthenticated, 3},
+		{CodeScopesMissing, 3},
 		{CodeNoActiveDevice, 4},
 		{CodeDeviceNotFound, 4},
 		{CodeAmbiguousDevice, 4},

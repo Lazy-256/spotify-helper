@@ -40,6 +40,13 @@ Noctalia v5, но работает и сам по себе — весь выво
    обновляется автоматически. Токен привязан к `client_id`: смена `client_id`
    требует нового `login`.
 
+   Запрашиваются права `user-read-playback-state user-modify-playback-state
+   user-read-currently-playing playlist-read-private user-library-read
+   user-library-modify`. Последнее нужно для `save`/`unsave`; если токен выдан до
+   его появления, `doctor` покажет `scopes_missing`, а `save`/`unsave` ответят
+   `scopes_missing` — выполни `spotify-helper login` ещё раз. Чтение (`saved`,
+   `playlists`, `albums`) при этом работает.
+
 В конфиге поддерживается только подмножество TOML: пустые строки, комментарии
 `#` и пары `ключ = "строка в двойных кавычках"`. Всё остальное — ошибка
 `not_configured`.
@@ -80,6 +87,8 @@ go build -ldflags "-X github.com/Lazy-256/spotify-helper/internal/cli.Version=0.
 | `queue [--covers]`, `queue-add <uri\|ссылка>` | очередь: читать и добавлять трек/эпизод |
 | `devices`, `transfer <id\|имя> [--play]` | устройства Connect |
 | `playlists`, `albums` `[--limit 1-50] [--offset N] [--covers]` | ваша библиотека |
+| `save <uri\|ссылка>`, `unsave <uri\|ссылка>` | добавить трек/эпизод в библиотеку («Любимые треки») и убрать |
+| `saved <uri\|ссылка>` | лежит ли трек/эпизод в библиотеке |
 | `cover <https-url>` | скачать картинку в кэш и вернуть путь |
 | `doctor` | офлайн-диагностика |
 | `version` | версия |
@@ -130,7 +139,8 @@ go build -ldflags "-X github.com/Lazy-256/spotify-helper/internal/cli.Version=0.
 
 `volume` → `{"ok":true,"volume_percent":N}`, `seek` → `{"ok":true,"position_ms":N}`,
 `shuffle` → `{"ok":true,"shuffle":bool}`, `repeat` → `{"ok":true,"repeat":"…"}`,
-`queue-add` → `{"ok":true,"uri":"…"}`, `transfer` →
+`queue-add`, `save`, `unsave` → `{"ok":true,"uri":"…"}`, `saved` →
+`{"uri":"…","saved":bool}`, `transfer` →
 `{"ok":true,"device":{"id":"…","name":"…"}}`,
 `cover` → `{"ok":true,"url":"…","path":"/abs/path.jpg","cached":bool}`.
 
@@ -156,7 +166,7 @@ go build -ldflags "-X github.com/Lazy-256/spotify-helper/internal/cli.Version=0.
 |---|---|---|
 | `internal`, `api_error` | 1 | внутренняя ошибка; неожиданный ответ Spotify (в сообщении HTTP-статус) |
 | `usage` | 2 | неверные аргументы; Spotify не вызывается |
-| `not_configured`, `not_authenticated` | 3 | нет `client_id`; нет токена / он чужой / отозван — нужен `login` |
+| `not_configured`, `not_authenticated`, `scopes_missing` | 3 | нет `client_id`; нет токена / он чужой / отозван — нужен `login`; у токена нет нужного права (`save`/`unsave` без `user-library-modify`) — тоже `login` |
 | `no_active_device`, `device_not_found`, `ambiguous_device` | 4 | нет активного устройства; `transfer` не нашёл или нашёл несколько |
 | `rate_limited` | 5 | HTTP 429; поле `error.retry_after` — секунды ожидания |
 | `premium_required` | 6 | нужен Premium |
@@ -197,6 +207,7 @@ Spotify.
 - [x] `queue`, `queue-add`
 - [x] `play-uri` для трека, альбома, плейлиста, артиста и ссылки `open.spotify.com`
 - [x] `playlists`, `albums`
+- [x] `saved` → `save` → `saved` → `unsave` → `saved` на настоящем аккаунте после `login` с новым правом (ответы `false`, `ok`, `true`, `ok`, `false`); заодно проверить, что Development Mode пропускает `/me/library`
 - [x] `state --covers`, `queue --covers`, `search --covers`, `playlists --covers`, `albums --covers`
 - [x] время вызова: `state`, `devices`, `queue` — 100–160 мс; команды управления —
   100–500 мс; `search` — 0,5–1,2 с (для сравнения: `spotify_player` без демона 24–60 с)
@@ -223,6 +234,9 @@ Spotify.
   ограничивает позицию значением «длительность минус 1 секунда» и трек не завершает.
 - **Очередь**: Spotify отдаёт не более 20 ближайших элементов; `queue-add` ставит
   трек в начало очереди (его проигрывает следующий `next`).
+- **Библиотека**: `save`/`unsave` идемпотентны (Spotify отвечает 200 и когда трек уже
+  был или не был). Сразу после записи `saved` может на мгновение показать старое
+  значение, поэтому вызывающему лучше доверять результату своей записи.
 - **`search`** может вернуть меньше 10 плейлистов: `null`-записи отбрасываются.
 - Один раз колонка сообщила громкость 93 сразу после того, как была выставлена 20;
   позже громкость держалась стабильно. Причина на стороне устройства, не выяснена.

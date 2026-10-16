@@ -22,6 +22,7 @@ const (
 	CodeUsage            Code = "usage"
 	CodeNotConfigured    Code = "not_configured"
 	CodeNotAuthenticated Code = "not_authenticated"
+	CodeScopesMissing    Code = "scopes_missing"
 	CodeNoActiveDevice   Code = "no_active_device"
 	CodeDeviceNotFound   Code = "device_not_found"
 	CodeAmbiguousDevice  Code = "ambiguous_device"
@@ -35,7 +36,7 @@ func (c Code) ExitCode() int {
 	switch c {
 	case CodeUsage:
 		return 2
-	case CodeNotConfigured, CodeNotAuthenticated:
+	case CodeNotConfigured, CodeNotAuthenticated, CodeScopesMissing:
 		return 3
 	case CodeNoActiveDevice, CodeDeviceNotFound, CodeAmbiguousDevice:
 		return 4
