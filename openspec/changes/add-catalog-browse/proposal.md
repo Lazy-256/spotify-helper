@@ -58,7 +58,7 @@ No existing output changes. The `login` output lists one more granted scope.
 - Requests: `GET /albums/{id}` and `GET /albums/{id}/tracks`, `GET /playlists/{id}` and
   `GET /playlists/{id}/items`, `GET /artists/{id}` and `GET /artists/{id}/albums`: a header request and a
   page request per call (one request when a playlist has no items to page).
-- Risks: none of these endpoints has been called from this app in Development Mode, and the guide leaves
-  the album and artist-album endpoints unconfirmed; the first task is a recorded check against a real
-  account. The playlist `items` rename (`track` to `item`) is handled for both names. A collaborative
+- Risks: the endpoints were first called from this app in Development Mode by the live check (task 4.1):
+  album, artist and own playlists work, another user's playlist has no tracks, Spotify's editorial playlists
+  answer 404, and an artist's albums come at most 10 per request (see `design.md`). The playlist `items` rename (`track` to `item`) is handled for both names. A collaborative
   playlist read with an old token may come back without items; the caller is told it is collaborative.

@@ -11,7 +11,7 @@ import (
 func init() {
 	register(&command{name: "album", usage: "<uri|link> [--limit 1-50] [--offset N] [--covers]", summary: "show an album and its tracks", run: runAlbum})
 	register(&command{name: "playlist", usage: "<uri|link> [--limit 1-50] [--offset N] [--covers]", summary: "show a playlist and, when Spotify allows it, its tracks", run: runPlaylist})
-	register(&command{name: "artist", usage: "<uri|link> [--limit 1-50] [--offset N] [--covers]", summary: "show an artist and their albums and singles", run: runArtist})
+	register(&command{name: "artist", usage: "<uri|link> [--limit 1-10] [--offset N] [--covers]", summary: "show an artist and their albums and singles", run: runArtist})
 }
 
 // catalogArgs parses `<uri|link> [--limit] [--offset] [--covers]` and checks
@@ -64,6 +64,10 @@ func runArtist(env *Env, args []string) error {
 	if err != nil {
 		return err
 	}
+	// Spotify answers HTTP 400 "Invalid limit" to an artist's albums for more than
+	// 10 entries in Development Mode, so a larger page (including the default) is
+	// reduced, as search does.
+	limit = min(limit, api.MaxArtistAlbumsLimit)
 	return withClient(env, func(ctx context.Context, c *api.Client) error {
 		res, err := c.Artist(ctx, u, limit, offset)
 		if err != nil {

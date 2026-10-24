@@ -1,0 +1,7 @@
+# Spotify answers seen on a real account in Development Mode (2026-10-24), as the helper reports them.
+artist --limit 11 or more   -> {"error":{"code":"api_error","message":"Spotify answered HTTP 400: Invalid limit"}}
+artist --limit 1..10        -> ok (total releases 33 for the artist tried; offset 10 gives the next page)
+album --limit 50            -> ok
+playlist --limit 50 (own)   -> ok
+playlist of another user    -> exit 0, tracks_available false, total 0, tracks [] (metadata only)
+playlist 37i9dQZF1DX... (Spotify-made editorial) -> {"error":{"code":"api_error","message":"Spotify answered HTTP 404: Resource not found"}}

@@ -66,7 +66,7 @@ Lets a caller look inside one catalog item: the tracks of an album or playlist, 
 - **THEN** the command exits 2 with `error.code` `usage`
 
 ### Requirement: Paging and covers
-The three commands SHALL accept `--limit <n>` (1–50, default 50) and `--offset <n>` (≥ 0, default 0); out-of-range or non-integer values SHALL fail with `usage`. `--limit` and `--offset` apply to the list the command returns (`tracks` or `albums`). With `--covers` every entry that has an image, and the header item (`album`, `playlist` or `artist`), SHALL carry `cover_path` as for `search --covers` (a local file or `null`); without it no `cover_path` appears. Tracks of an album SHALL share the album's cover, so the album's image is requested once.
+The three commands SHALL accept `--limit <n>` (1–50, default 50) and `--offset <n>` (≥ 0, default 0); out-of-range or non-integer values SHALL fail with `usage`. For `artist` Spotify serves at most 10 albums per request in Development Mode (a larger limit is answered with HTTP 400), so its default SHALL be 10 and a `--limit` from 11 to 50 SHALL be reduced to 10, as `search` reduces its limit; the output's `limit` is the applied value. `--limit` and `--offset` apply to the list the command returns (`tracks` or `albums`). With `--covers` every entry that has an image, and the header item (`album`, `playlist` or `artist`), SHALL carry `cover_path` as for `search --covers` (a local file or `null`); without it no `cover_path` appears. Tracks of an album SHALL share the album's cover, so the album's image is requested once.
 
 #### Scenario: Second page
 - **WHEN** the user runs `album spotify:album:abc --limit 10 --offset 10`
@@ -75,6 +75,14 @@ The three commands SHALL accept `--limit <n>` (1–50, default 50) and `--offset
 #### Scenario: Bad limit
 - **WHEN** the user runs `artist spotify:artist:abc --limit 0`
 - **THEN** the command exits 2 with `error.code` `usage`
+
+#### Scenario: Artist page size
+- **WHEN** the user runs `artist spotify:artist:abc` or `artist spotify:artist:abc --limit 20`
+- **THEN** Spotify receives `limit=10` and the output's `limit` is 10
+
+#### Scenario: Next page of an artist
+- **WHEN** the artist has 33 releases and the user runs `artist spotify:artist:abc --offset 10`
+- **THEN** the output has `total` 33, `offset` 10 and the next up to 10 albums
 
 #### Scenario: Covers
 - **WHEN** the user runs `album spotify:album:abc --covers`
@@ -94,3 +102,7 @@ The three commands SHALL use the shared error mapping: `not_authenticated`, `rat
 #### Scenario: Unknown album
 - **WHEN** Spotify answers 404 for the album
 - **THEN** the command exits 1 with `error.code` `api_error` and a message that includes 404
+
+#### Scenario: A playlist Spotify does not serve at all
+- **WHEN** the playlist is one of Spotify's own editorial playlists and Spotify answers 404 for it, which it does to apps in Development Mode
+- **THEN** the command exits 1 with `error.code` `api_error` and a message that includes 404, the same as for a playlist that does not exist

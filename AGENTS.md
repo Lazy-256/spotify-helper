@@ -35,8 +35,10 @@ CLI-хелпер на Go для управления Spotify через Web API.
   `http://127.0.0.1:8888/callback` (именно `127.0.0.1`, не `localhost`; порт
   фиксированный, должен совпадать посимвольно).
 - Scopes: `user-read-playback-state user-modify-playback-state
-  user-read-currently-playing playlist-read-private user-library-read
-  user-library-modify`.
+  user-read-currently-playing playlist-read-private playlist-read-collaborative
+  user-library-read user-library-modify`. `playlist-read-collaborative` только
+  запрашивается (нужен лишь для треков совместных плейлистов в `playlist`), ни одна команда
+  и `doctor` его не требуют: у старого токена всё работает.
 - Только стандартная библиотека Go, пока нет веской причины тащить зависимость.
 - Вывод — JSON в stdout; ошибки — JSON в stderr и ненулевой код выхода.
   Формат — контракт с плагином (см. спеки в `openspec/specs/`).
@@ -44,7 +46,9 @@ CLI-хелпер на Go для управления Spotify через Web API.
 ## Ограничения Spotify (Development Mode, с февраля 2026)
 
 Владелец приложения обязан иметь Premium; не более 5 пользователей; поиск
-отдаёт до 10 результатов; часть каталожных эндпоинтов убрана; HTTP 429 несёт
+отдаёт до 10 результатов; часть каталожных эндпоинтов убрана (топ-треков артиста нет;
+треки плейлиста — только своих и совместных; альбомы артиста — страницами по 10;
+редакционные плейлисты Spotify дают 404; проверено на аккаунте 2026-10-24, см. README); HTTP 429 несёт
 `Retry-After`, который надо уважать (без автоповторов). Подробности и источники —
 в документации Spotify «February 2026 Web API Dev Mode Changes».
 
@@ -67,7 +71,7 @@ cmd/spotify-helper/    main: только cli.Run
 internal/cli/          подкоманды, Env (потоки, окружение, часы, HTTP, браузер), разбор аргументов
 internal/config/       XDG-пути, config.toml (подмножество TOML), client_id
 internal/auth/         PKCE, callback-сервер, token endpoint, хранилище токена, обновление под flock
-internal/api/          клиент Web API, маппинг ошибок, wire → типы вывода, player/search/queue/library
+internal/api/          клиент Web API, маппинг ошибок, wire → типы вывода, player/search/queue/library/catalog
 internal/covers/       кэш обложек и пост-обработка --covers
 internal/doctor/       офлайн-отчёт
 internal/ratelimit/    кулдаун после 429 на диске

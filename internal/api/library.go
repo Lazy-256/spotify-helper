@@ -14,6 +14,10 @@ import (
 // MaxLibraryLimit is the largest page Spotify serves for library listings.
 const MaxLibraryLimit = 50
 
+// MaxArtistAlbumsLimit is the largest page of an artist's albums Spotify serves
+// to an app in Development Mode (a larger limit is answered with HTTP 400).
+const MaxArtistAlbumsLimit = 10
+
 func pageQuery(limit, offset int) url.Values {
 	return url.Values{"limit": {strconv.Itoa(limit)}, "offset": {strconv.Itoa(offset)}}
 }

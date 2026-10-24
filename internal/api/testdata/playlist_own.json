@@ -1,0 +1,100 @@
+{
+ "playlist": {
+  "uri": "spotify:playlist:FAKEPLAYLIST01",
+  "id": "FAKEID23",
+  "name": "Name N27",
+  "owner_name": "Owner O01",
+  "cover_url": "https://example.invalid/cover/COVER13.jpg",
+  "collaborative": false
+ },
+ "tracks_available": true,
+ "tracks": [
+  {
+   "type": "episode",
+   "uri": "spotify:episode:FAKEEPISODE01",
+   "id": "FAKEID24",
+   "name": "Name N28",
+   "artists": [],
+   "album": {
+    "name": "Name N29",
+    "uri": "spotify:show:FAKESHOW01"
+   },
+   "duration_ms": 1747943,
+   "explicit": false,
+   "cover_url": "https://example.invalid/cover/COVER14.jpg"
+  },
+  {
+   "type": "episode",
+   "uri": "spotify:episode:FAKEEPISODE02",
+   "id": "FAKEID25",
+   "name": "Name N30",
+   "artists": [],
+   "album": {
+    "name": "Name N29",
+    "uri": "spotify:show:FAKESHOW01"
+   },
+   "duration_ms": 1189368,
+   "explicit": false,
+   "cover_url": "https://example.invalid/cover/COVER15.jpg"
+  },
+  {
+   "type": "episode",
+   "uri": "spotify:episode:FAKEEPISODE03",
+   "id": "FAKEID26",
+   "name": "Name N31",
+   "artists": [],
+   "album": {
+    "name": "Name N29",
+    "uri": "spotify:show:FAKESHOW01"
+   },
+   "duration_ms": 1026696,
+   "explicit": false,
+   "cover_url": "https://example.invalid/cover/COVER16.jpg"
+  },
+  {
+   "type": "episode",
+   "uri": "spotify:episode:FAKEEPISODE04",
+   "id": "FAKEID27",
+   "name": "Name N32",
+   "artists": [],
+   "album": {
+    "name": "Name N29",
+    "uri": "spotify:show:FAKESHOW01"
+   },
+   "duration_ms": 1511549,
+   "explicit": false,
+   "cover_url": "https://example.invalid/cover/COVER17.jpg"
+  },
+  {
+   "type": "episode",
+   "uri": "spotify:episode:FAKEEPISODE05",
+   "id": "FAKEID28",
+   "name": "Name N33",
+   "artists": [],
+   "album": {
+    "name": "Name N29",
+    "uri": "spotify:show:FAKESHOW01"
+   },
+   "duration_ms": 1436303,
+   "explicit": false,
+   "cover_url": "https://example.invalid/cover/COVER18.jpg"
+  },
+  {
+   "type": "episode",
+   "uri": "spotify:episode:FAKEEPISODE06",
+   "id": "FAKEID29",
+   "name": "Name N34",
+   "artists": [],
+   "album": {
+    "name": "Name N29",
+    "uri": "spotify:show:FAKESHOW01"
+   },
+   "duration_ms": 1443936,
+   "explicit": false,
+   "cover_url": "https://example.invalid/cover/COVER19.jpg"
+  }
+ ],
+ "total": 6,
+ "offset": 0,
+ "limit": 30
+}

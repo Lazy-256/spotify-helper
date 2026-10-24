@@ -142,8 +142,8 @@ func TestArtistCommand(t *testing.T) {
 	f.reply("GET /artists/art/albums", 200, `{"total":25,"items":[null,
 	 {"id":"a1","uri":"spotify:album:a1","name":"First","release_date":"2019","total_tracks":9,"artists":[],"images":[{"url":"`+srv.URL+`/image/a1","width":300}]}]}`)
 
-	res := parse(t, runOK(t, env, out, errb, "artist", "spotify:artist:art", "--covers", "--limit", "20", "--offset", "5"))
-	if res["total"] != float64(25) || res["limit"] != float64(20) || res["offset"] != float64(5) {
+	res := parse(t, runOK(t, env, out, errb, "artist", "spotify:artist:art", "--covers", "--limit", "8", "--offset", "5"))
+	if res["total"] != float64(25) || res["limit"] != float64(8) || res["offset"] != float64(5) {
 		t.Errorf("paging: %v", res)
 	}
 	albums := res["albums"].([]any)
@@ -156,7 +156,7 @@ func TestArtistCommand(t *testing.T) {
 		}
 	}
 	c := f.callsTo("GET /artists/art/albums")[0]
-	if c.Query.Get("include_groups") != "album,single" || c.Query.Get("limit") != "20" || c.Query.Get("offset") != "5" {
+	if c.Query.Get("include_groups") != "album,single" || c.Query.Get("limit") != "8" || c.Query.Get("offset") != "5" {
 		t.Errorf("query: %v", c.Query)
 	}
 }
@@ -166,9 +166,29 @@ func TestArtistWithoutReleases(t *testing.T) {
 	f.reply("GET /artists/art", 200, `{"id":"art","uri":"spotify:artist:art","name":"Band"}`)
 	f.reply("GET /artists/art/albums", 200, `{"total":0,"items":[]}`)
 	got := runOK(t, env, out, errb, "artist", "spotify:artist:art")
-	want := `{"artist":{"uri":"spotify:artist:art","id":"art","name":"Band","cover_url":null},"albums":[],"total":0,"offset":0,"limit":50}` + "\n"
+	want := `{"artist":{"uri":"spotify:artist:art","id":"art","name":"Band","cover_url":null},"albums":[],"total":0,"offset":0,"limit":10}` + "\n"
 	if got != want {
 		t.Errorf("got  %s\nwant %s", got, want)
+	}
+	if c := f.callsTo("GET /artists/art/albums")[0]; c.Query.Get("limit") != "10" {
+		t.Errorf("the default page of an artist must be 10 (Spotify refuses more): %v", c.Query)
+	}
+}
+
+// Spotify answers HTTP 400 to more than 10 albums of an artist in Development
+// Mode (seen on a real account), so every larger limit is reduced to 10.
+func TestArtistLimitIsReducedToTen(t *testing.T) {
+	for _, limit := range []string{"11", "20", "50"} {
+		env, f, out, errb := spotifyEnv(t)
+		f.reply("GET /artists/art", 200, `{"id":"art","uri":"spotify:artist:art","name":"Band"}`)
+		f.reply("GET /artists/art/albums", 200, `{"total":33,"items":[]}`)
+		res := parse(t, runOK(t, env, out, errb, "artist", "spotify:artist:art", "--limit", limit))
+		if res["limit"] != float64(10) {
+			t.Errorf("--limit %s: echoed %v, want 10", limit, res["limit"])
+		}
+		if c := f.callsTo("GET /artists/art/albums")[0]; c.Query.Get("limit") != "10" {
+			t.Errorf("--limit %s: sent %v, want 10", limit, c.Query)
+		}
 	}
 }
 

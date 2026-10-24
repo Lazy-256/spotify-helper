@@ -85,6 +85,22 @@ absent, or a 403, or something else); whether `total` is present when items are 
 `fields` parameter can keep the header request small; and whether `/items` answers for the user's own
 playlists. If an answer differs from the spec, the spec is updated before the code is finished.
 
+## Findings of the live check (2026-10-24, real account, Development Mode)
+
+- `album` (saved album, 10 tracks, `--limit 50`) and `playlist` of an own playlist (`--limit 50`) answer as specified.
+- `playlist` of another user's playlist answers 200 with the header and no items: `tracks_available` false, `total` 0.
+  The same for large public playlists of third parties.
+- `playlist` of Spotify's own editorial playlists (ids beginning `37i9dQZ`) answers **404** for the header itself, so
+  no screen can be drawn for them; the command reports `api_error` with the status. A caller should say "Spotify does
+  not give this app that playlist".
+- `artist` with `--limit` above **10** is refused by Spotify (HTTP 400 "Invalid limit"); 1 to 10 work and `offset`
+  pages (33 releases for the artist tried). The command's default and cap are therefore 10 for artists.
+- `--covers` was fast: an album (one cover) 0.2 s, an artist page of 10 albums (11 covers) 0.3 s, a playlist page of
+  7 tracks 1.5 s; a cold cache was not forced.
+- `play-uri <third track> --context <saved album>` answered `{"ok":true}`; three seconds later `state` showed that
+  track playing with `context` the album, and `queue` listed the following tracks of the album in order
+  ("play from here" works; the playback was paused again afterwards).
+
 ## Risks / Trade-offs
 
 - **An endpoint behaves differently in Development Mode than documented** → the spike runs before docs

@@ -1,0 +1,180 @@
+{
+ "artist": {
+  "uri": "spotify:artist:FAKEARTIST02",
+  "id": "FAKEID12",
+  "name": "Name N12",
+  "cover_url": "https://example.invalid/cover/COVER02.jpg",
+  "cover_path": "/tmp/spotify-test/PATH01.jpg"
+ },
+ "albums": [
+  {
+   "uri": "spotify:album:FAKEALBUM02",
+   "id": "FAKEID13",
+   "name": "Name N13",
+   "artists": [
+    {
+     "name": "Name N12",
+     "uri": "spotify:artist:FAKEARTIST02"
+    }
+   ],
+   "release_date": "2025-08-22",
+   "total_tracks": 22,
+   "cover_url": "https://example.invalid/cover/COVER03.jpg",
+   "cover_path": "/tmp/spotify-test/PATH02.jpg"
+  },
+  {
+   "uri": "spotify:album:FAKEALBUM03",
+   "id": "FAKEID14",
+   "name": "Name N14",
+   "artists": [
+    {
+     "name": "Name N12",
+     "uri": "spotify:artist:FAKEARTIST02"
+    }
+   ],
+   "release_date": "2022-11-11",
+   "total_tracks": 8,
+   "cover_url": "https://example.invalid/cover/COVER04.jpg",
+   "cover_path": "/tmp/spotify-test/PATH03.jpg"
+  },
+  {
+   "uri": "spotify:album:FAKEALBUM04",
+   "id": "FAKEID15",
+   "name": "Name N15",
+   "artists": [
+    {
+     "name": "Name N16",
+     "uri": "spotify:artist:FAKEARTIST03"
+    },
+    {
+     "name": "Name N12",
+     "uri": "spotify:artist:FAKEARTIST02"
+    }
+   ],
+   "release_date": "2026-09-18",
+   "total_tracks": 1,
+   "cover_url": "https://example.invalid/cover/COVER05.jpg",
+   "cover_path": "/tmp/spotify-test/PATH04.jpg"
+  },
+  {
+   "uri": "spotify:album:FAKEALBUM05",
+   "id": "FAKEID16",
+   "name": "Name N17",
+   "artists": [
+    {
+     "name": "Name N12",
+     "uri": "spotify:artist:FAKEARTIST02"
+    }
+   ],
+   "release_date": "2026-07-24",
+   "total_tracks": 1,
+   "cover_url": "https://example.invalid/cover/COVER06.jpg",
+   "cover_path": "/tmp/spotify-test/PATH05.jpg"
+  },
+  {
+   "uri": "spotify:album:FAKEALBUM06",
+   "id": "FAKEID17",
+   "name": "Name N18",
+   "artists": [
+    {
+     "name": "Name N12",
+     "uri": "spotify:artist:FAKEARTIST02"
+    },
+    {
+     "name": "Name N19",
+     "uri": "spotify:artist:FAKEARTIST04"
+    }
+   ],
+   "release_date": "2026-05-15",
+   "total_tracks": 1,
+   "cover_url": "https://example.invalid/cover/COVER07.jpg",
+   "cover_path": "/tmp/spotify-test/PATH06.jpg"
+  },
+  {
+   "uri": "spotify:album:FAKEALBUM07",
+   "id": "FAKEID18",
+   "name": "Name N20",
+   "artists": [
+    {
+     "name": "Name N12",
+     "uri": "spotify:artist:FAKEARTIST02"
+    }
+   ],
+   "release_date": "2026-04-03",
+   "total_tracks": 1,
+   "cover_url": "https://example.invalid/cover/COVER08.jpg",
+   "cover_path": "/tmp/spotify-test/PATH07.jpg"
+  },
+  {
+   "uri": "spotify:album:FAKEALBUM08",
+   "id": "FAKEID19",
+   "name": "Name N21",
+   "artists": [
+    {
+     "name": "Name N12",
+     "uri": "spotify:artist:FAKEARTIST02"
+    }
+   ],
+   "release_date": "2025-11-21",
+   "total_tracks": 6,
+   "cover_url": "https://example.invalid/cover/COVER09.jpg",
+   "cover_path": "/tmp/spotify-test/PATH08.jpg"
+  },
+  {
+   "uri": "spotify:album:FAKEALBUM09",
+   "id": "FAKEID20",
+   "name": "Name N22",
+   "artists": [
+    {
+     "name": "Name N12",
+     "uri": "spotify:artist:FAKEARTIST02"
+    }
+   ],
+   "release_date": "2025-10-17",
+   "total_tracks": 1,
+   "cover_url": "https://example.invalid/cover/COVER10.jpg",
+   "cover_path": "/tmp/spotify-test/PATH09.jpg"
+  },
+  {
+   "uri": "spotify:album:FAKEALBUM10",
+   "id": "FAKEID21",
+   "name": "Name N23",
+   "artists": [
+    {
+     "name": "Name N12",
+     "uri": "spotify:artist:FAKEARTIST02"
+    },
+    {
+     "name": "Name N24",
+     "uri": "spotify:artist:FAKEARTIST05"
+    },
+    {
+     "name": "Name N25",
+     "uri": "spotify:artist:FAKEARTIST06"
+    }
+   ],
+   "release_date": "2025-09-12",
+   "total_tracks": 1,
+   "cover_url": "https://example.invalid/cover/COVER11.jpg",
+   "cover_path": "/tmp/spotify-test/PATH10.jpg"
+  },
+  {
+   "uri": "spotify:album:FAKEALBUM11",
+   "id": "FAKEID22",
+   "name": "Name N26",
+   "artists": [
+    {
+     "name": "Name N12",
+     "uri": "spotify:artist:FAKEARTIST02"
+    }
+   ],
+   "release_date": "2025-06-27",
+   "total_tracks": 2,
+   "cover_url": "https://example.invalid/cover/COVER12.jpg",
+   "cover_path": "/tmp/spotify-test/PATH11.jpg"
+  }
+ ],
+ "total": 33,
+ "offset": 0,
+ "limit": 10
+}

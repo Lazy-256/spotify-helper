@@ -18,7 +18,7 @@
 
 ## 4. Live check
 
-- [ ] 4.1 Run each new request once with the real account and record the answers as fixtures under `internal/api/testdata` (ids and names replaced): `album` and `artist` of any release, `playlist` of an own playlist, a followed one and a Spotify-made one, and `play-uri <track> --context <album>` on the active device; note what differs from the spec (availability of `/albums/{id}/tracks` and `/artists/{id}/albums`, the shape of a playlist without items, `total` when items are absent, a 403) and update the artifacts of this change before continuing
+- [x] 4.1 Run each new request once with the real account and record the answers as fixtures under `internal/api/testdata` (ids and names replaced): `album` and `artist` of any release, `playlist` of an own playlist, a followed one and a Spotify-made one, and `play-uri <track> --context <album>` on the active device; note what differs from the spec (availability of `/albums/{id}/tracks` and `/artists/{id}/albums`, the shape of a playlist without items, `total` when items are absent, a 403) and update the artifacts of this change before continuing (done 2026-10-24, see the findings in `design.md`)
 
 ## 5. Login scope
 
@@ -26,5 +26,5 @@
 
 ## 6. Documentation and checks
 
-- [ ] 6.1 Update `README.md` (commands table, output shapes, the Development Mode limits for playlists and artists, `login` once more for collaborative playlists, `play-uri --context`) and `AGENTS.md` (scopes, structure, the facts found in the live check); verify by reading both for stale statements such as "no way to list the contents of an album"
+- [x] 6.1 Update `README.md` (commands table, output shapes, the Development Mode limits for playlists and artists, `login` once more for collaborative playlists, `play-uri --context`) and `AGENTS.md` (scopes, structure, the facts found in the live check); verify by reading both for stale statements such as "no way to list the contents of an album"
 - [x] 6.2 Run `go build ./...`, `go vet ./...`, `gofmt -l .` and `go test -race ./...` and verify they pass with no output from `gofmt`

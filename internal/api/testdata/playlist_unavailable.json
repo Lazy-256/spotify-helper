@@ -1,0 +1,15 @@
+{
+ "playlist": {
+  "uri": "spotify:playlist:FAKEPLAYLIST02",
+  "id": "FAKEID30",
+  "name": "Name N35",
+  "owner_name": "Owner O02",
+  "cover_url": "https://example.invalid/cover/COVER20.jpg",
+  "collaborative": false
+ },
+ "tracks_available": false,
+ "tracks": [],
+ "total": 0,
+ "offset": 0,
+ "limit": 30
+}
