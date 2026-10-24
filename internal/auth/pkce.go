@@ -20,6 +20,8 @@ var Scopes = []string{
 	ScopeCollaborativePlaylists,
 	"user-library-read",
 	ScopeLibraryModify,
+	ScopeRecentlyPlayed,
+	ScopeTopRead,
 }
 
 // ScopeCollaborativePlaylists lets `playlist` read collaborative playlists.
@@ -28,10 +30,21 @@ var Scopes = []string{
 // logging in again. Doctor therefore does not check it; see RequiredScopes.
 const ScopeCollaborativePlaylists = "playlist-read-collaborative"
 
+// ScopeRecentlyPlayed and ScopeTopRead let `recent` and `top` read the listening
+// history. Those two commands require them (a token without fails with
+// scopes_missing before a request is sent), but no other command does, so
+// doctor does not check them either; see RequiredScopes.
+const (
+	ScopeRecentlyPlayed = "user-read-recently-played"
+	ScopeTopRead        = "user-top-read"
+)
+
 // RequiredScopes are the requested scopes a stored token must have: all of
-// Scopes except the ones that are only nice to have.
+// Scopes except the ones that only a single optional feature needs.
 func RequiredScopes() []string {
-	return slices.DeleteFunc(slices.Clone(Scopes), func(s string) bool { return s == ScopeCollaborativePlaylists })
+	return slices.DeleteFunc(slices.Clone(Scopes), func(s string) bool {
+		return s == ScopeCollaborativePlaylists || s == ScopeRecentlyPlayed || s == ScopeTopRead
+	})
 }
 
 // ScopeLibraryModify lets save and unsave change the user's library. Tokens

@@ -259,6 +259,66 @@ func (p *PlaylistContents) Covers() []*Cover {
 	return out
 }
 
+// PlayedItem is one entry of the listening history: a track, when it was
+// played (RFC 3339) and the context it was played from, if any.
+type PlayedItem struct {
+	PlayedAt string           `json:"played_at"`
+	Context  *PlaybackContext `json:"context"`
+	Track    Item             `json:"track"`
+}
+
+// Cursors are Spotify's time cursors of the history, in Unix milliseconds:
+// Before is the value for the next older page, After for newer items. Either is
+// null when there is no such page.
+type Cursors struct {
+	Before *int64 `json:"before"`
+	After  *int64 `json:"after"`
+}
+
+// RecentPage is the `recent` command.
+type RecentPage struct {
+	Limit   int          `json:"limit"`
+	Cursors Cursors      `json:"cursors"`
+	Items   []PlayedItem `json:"items"`
+}
+
+// Covers returns the cover of every played track.
+func (r *RecentPage) Covers() []*Cover {
+	out := make([]*Cover, 0, len(r.Items))
+	for i := range r.Items {
+		out = append(out, &r.Items[i].Track.Cover)
+	}
+	return out
+}
+
+// TopResult is the `top` command. Exactly one of Tracks and Artists is set,
+// as a pointer so that an empty list still appears as [].
+type TopResult struct {
+	Type    string         `json:"type"`
+	Range   string         `json:"range"`
+	Total   int            `json:"total"`
+	Offset  int            `json:"offset"`
+	Limit   int            `json:"limit"`
+	Tracks  *[]Item        `json:"tracks,omitempty"`
+	Artists *[]ArtistEntry `json:"artists,omitempty"`
+}
+
+// Covers returns every cover in the result.
+func (t *TopResult) Covers() []*Cover {
+	var out []*Cover
+	if t.Tracks != nil {
+		for i := range *t.Tracks {
+			out = append(out, &(*t.Tracks)[i].Cover)
+		}
+	}
+	if t.Artists != nil {
+		for i := range *t.Artists {
+			out = append(out, &(*t.Artists)[i].Cover)
+		}
+	}
+	return out
+}
+
 // ArtistContents is the `artist` command: the artist and one page of their
 // albums and singles.
 type ArtistContents struct {

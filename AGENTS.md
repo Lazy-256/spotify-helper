@@ -36,7 +36,9 @@ CLI-хелпер на Go для управления Spotify через Web API.
   фиксированный, должен совпадать посимвольно).
 - Scopes: `user-read-playback-state user-modify-playback-state
   user-read-currently-playing playlist-read-private playlist-read-collaborative
-  user-library-read user-library-modify`. `playlist-read-collaborative` только
+  user-library-read user-library-modify user-read-recently-played user-top-read`.
+  `user-read-recently-played` и `user-top-read` требуют только `recent` и `top` (без них —
+  `scopes_missing` до запроса); `doctor` их не проверяет. `playlist-read-collaborative` только
   запрашивается (нужен лишь для треков совместных плейлистов в `playlist`), ни одна команда
   и `doctor` его не требуют: у старого токена всё работает.
 - Только стандартная библиотека Go, пока нет веской причины тащить зависимость.
@@ -71,7 +73,7 @@ cmd/spotify-helper/    main: только cli.Run
 internal/cli/          подкоманды, Env (потоки, окружение, часы, HTTP, браузер), разбор аргументов
 internal/config/       XDG-пути, config.toml (подмножество TOML), client_id
 internal/auth/         PKCE, callback-сервер, token endpoint, хранилище токена, обновление под flock
-internal/api/          клиент Web API, маппинг ошибок, wire → типы вывода, player/search/queue/library/catalog
+internal/api/          клиент Web API, маппинг ошибок, wire → типы вывода, player/search/queue/library/catalog/history
 internal/covers/       кэш обложек и пост-обработка --covers
 internal/doctor/       офлайн-отчёт
 internal/ratelimit/    кулдаун после 429 на диске

@@ -1,0 +1,147 @@
+{
+ "limit": 5,
+ "cursors": {
+  "before": 1767225599000,
+  "after": 1767229200000
+ },
+ "items": [
+  {
+   "played_at": "2026-01-01T00:59:00.000Z",
+   "context": {
+    "type": "artist",
+    "uri": "spotify:artist:FAKEARTIST03"
+   },
+   "track": {
+    "type": "track",
+    "uri": "spotify:track:FAKETRACK06",
+    "id": "FAKEID06",
+    "name": "Name N12",
+    "artists": [
+     {
+      "name": "Name N06",
+      "uri": "spotify:artist:FAKEARTIST03"
+     },
+     {
+      "name": "Name N13",
+      "uri": "spotify:artist:FAKEARTIST04"
+     }
+    ],
+    "album": {
+     "name": "Name N12",
+     "uri": "spotify:album:FAKEALBUM05"
+    },
+    "duration_ms": 188066,
+    "explicit": false,
+    "cover_url": "https://example.invalid/cover/COVER05.jpg"
+   }
+  },
+  {
+   "played_at": "2026-01-01T00:58:00.000Z",
+   "context": {
+    "type": "artist",
+    "uri": "spotify:artist:FAKEARTIST03"
+   },
+   "track": {
+    "type": "track",
+    "uri": "spotify:track:FAKETRACK07",
+    "id": "FAKEID07",
+    "name": "Name N14",
+    "artists": [
+     {
+      "name": "Name N06",
+      "uri": "spotify:artist:FAKEARTIST03"
+     },
+     {
+      "name": "Name N15",
+      "uri": "spotify:artist:FAKEARTIST05"
+     }
+    ],
+    "album": {
+     "name": "Name N16",
+     "uri": "spotify:album:FAKEALBUM06"
+    },
+    "duration_ms": 254400,
+    "explicit": false,
+    "cover_url": "https://example.invalid/cover/COVER06.jpg"
+   }
+  },
+  {
+   "played_at": "2026-01-01T00:57:00.000Z",
+   "context": {
+    "type": "artist",
+    "uri": "spotify:artist:FAKEARTIST03"
+   },
+   "track": {
+    "type": "track",
+    "uri": "spotify:track:FAKETRACK08",
+    "id": "FAKEID08",
+    "name": "Name N17",
+    "artists": [
+     {
+      "name": "Name N06",
+      "uri": "spotify:artist:FAKEARTIST03"
+     }
+    ],
+    "album": {
+     "name": "Name N17",
+     "uri": "spotify:album:FAKEALBUM07"
+    },
+    "duration_ms": 200000,
+    "explicit": false,
+    "cover_url": "https://example.invalid/cover/COVER07.jpg"
+   }
+  },
+  {
+   "played_at": "2026-01-01T00:56:00.000Z",
+   "context": {
+    "type": "artist",
+    "uri": "spotify:artist:FAKEARTIST03"
+   },
+   "track": {
+    "type": "track",
+    "uri": "spotify:track:FAKETRACK09",
+    "id": "FAKEID09",
+    "name": "Name N18",
+    "artists": [
+     {
+      "name": "Name N06",
+      "uri": "spotify:artist:FAKEARTIST03"
+     }
+    ],
+    "album": {
+     "name": "Name N19",
+     "uri": "spotify:album:FAKEALBUM08"
+    },
+    "duration_ms": 197929,
+    "explicit": false,
+    "cover_url": "https://example.invalid/cover/COVER08.jpg"
+   }
+  },
+  {
+   "played_at": "2026-01-01T00:55:00.000Z",
+   "context": {
+    "type": "artist",
+    "uri": "spotify:artist:FAKEARTIST03"
+   },
+   "track": {
+    "type": "track",
+    "uri": "spotify:track:FAKETRACK10",
+    "id": "FAKEID10",
+    "name": "Name N20",
+    "artists": [
+     {
+      "name": "Name N06",
+      "uri": "spotify:artist:FAKEARTIST03"
+     }
+    ],
+    "album": {
+     "name": "Name N21",
+     "uri": "spotify:album:FAKEALBUM09"
+    },
+    "duration_ms": 218128,
+    "explicit": false,
+    "cover_url": "https://example.invalid/cover/COVER09.jpg"
+   }
+  }
+ ]
+}

@@ -5,3 +5,10 @@ album --limit 50            -> ok
 playlist --limit 50 (own)   -> ok
 playlist of another user    -> exit 0, tracks_available false, total 0, tracks [] (metadata only)
 playlist 37i9dQZF1DX... (Spotify-made editorial) -> {"error":{"code":"api_error","message":"Spotify answered HTTP 404: Resource not found"}}
+
+# Listening history (2026-10-24, after login with user-read-recently-played and user-top-read)
+recent --limit 5 / 50            -> ok; the same track can repeat (38 distinct tracks in 50 plays)
+recent --before <cursors.before> -> ok; strictly older plays; cursors.before moves back
+recent --after <cursors.after>   -> ok; 0 plays, both cursors null when nothing is newer
+top tracks / top artists, limit 50, any offset up to the total -> ok (totals: tracks 2039 medium, 547 short; artists 164 long, 140 medium)
+a token without the scope        -> scopes_missing before any request (helper-side check)

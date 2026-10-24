@@ -42,7 +42,10 @@ Noctalia v5, но работает и сам по себе — весь выво
 
    Запрашиваются права `user-read-playback-state user-modify-playback-state
    user-read-currently-playing playlist-read-private playlist-read-collaborative
-   user-library-read user-library-modify`. `user-library-modify` нужно для
+   user-library-read user-library-modify user-read-recently-played user-top-read`.
+   `user-read-recently-played` нужно для `recent`, `user-top-read` — для `top`: без них
+   эти две команды отвечают `scopes_missing` (запрос не отправляется), остальные команды
+   и `doctor` работают. `user-library-modify` нужно для
    `save`/`unsave`; если токен выдан до его появления, `doctor` покажет
    `scopes_missing`, а `save`/`unsave` ответят `scopes_missing` — выполни
    `spotify-helper login` ещё раз. Чтение (`saved`, `playlists`, `albums`) при этом
@@ -92,6 +95,8 @@ go build -ldflags "-X github.com/Lazy-256/spotify-helper/internal/cli.Version=0.
 | `devices`, `transfer <id\|имя> [--play]` | устройства Connect |
 | `playlists`, `albums` `[--limit 1-50] [--offset N] [--covers]` | ваша библиотека |
 | `album <uri\|ссылка>`, `playlist <uri\|ссылка>` `[--limit 1-50] [--offset N] [--covers]` | что внутри: треки альбома или плейлиста |
+| `recent [--limit 1-50] [--before МС \| --after МС] [--covers]` | недавно проигранные треки, новые первыми |
+| `top <tracks\|artists> [--range short\|medium\|long] [--limit 1-50] [--offset N] [--covers]` | ваши самые слушаемые треки или артисты (4 недели, 6 месяцев, год) |
 | `artist <uri\|ссылка> [--limit 1-10] [--offset N] [--covers]` | артист и его альбомы и синглы (по 10) |
 | `save <uri\|ссылка>`, `unsave <uri\|ссылка>` | добавить трек/эпизод в библиотеку («Любимые треки») и убрать |
 | `saved <uri\|ссылка>` | лежит ли трек/эпизод в библиотеке |
@@ -158,6 +163,13 @@ go build -ldflags "-X github.com/Lazy-256/spotify-helper/internal/cli.Version=0.
 "tracks_available":bool,"tracks":[Item…],"total":N,"offset":N,"limit":N}`. Треки — треки
 и эпизоды (пустые и локальные записи пропущены). Если Spotify не отдал элементы плейлиста
 (чужой плейлист), будет `tracks_available:false`, `tracks:[]`, `total:0` и код выхода 0.
+`recent`: `{"limit":N,"cursors":{"before":МС|null,"after":МС|null},"items":[{"played_at":"RFC 3339",
+"context":{"type","uri"}|null,"track":Item}…]}`. Страницы идут по времени, а не по смещению: следующая
+более старая страница — `recent --before <cursors.before>`; `before` равен `null`, когда старше ничего нет.
+Один трек может повторяться; подкастов в истории нет; приватная сессия не записывается.
+`top`: `{"type":"tracks|artists","range":"short|medium|long","total":N,"offset":N,"limit":N,
+"tracks":[Item…]}` или `"artists":[{uri,id,name,cover_url}…]` — ключ только запрошенного типа; жанров,
+подписчиков и популярности нет.
 `artist`: `{"artist":{uri,id,name,cover_url},"albums":[Album…],"total":N,"offset":N,"limit":N}`
 — только альбомы и синглы, без сборников и «появляется в»; `limit` — применённое значение
 (не больше 10). С `--covers` обложки получают шапка и все записи (у альбома это одна
@@ -192,7 +204,7 @@ go build -ldflags "-X github.com/Lazy-256/spotify-helper/internal/cli.Version=0.
 |---|---|---|
 | `internal`, `api_error` | 1 | внутренняя ошибка; неожиданный ответ Spotify (в сообщении HTTP-статус; например, 404 для редакционного плейлиста или несуществующего альбома) |
 | `usage` | 2 | неверные аргументы; Spotify не вызывается |
-| `not_configured`, `not_authenticated`, `scopes_missing` | 3 | нет `client_id`; нет токена / он чужой / отозван — нужен `login`; у токена нет нужного права (`save`/`unsave` без `user-library-modify`) — тоже `login` |
+| `not_configured`, `not_authenticated`, `scopes_missing` | 3 | нет `client_id`; нет токена / он чужой / отозван — нужен `login`; у токена нет нужного права (`save`/`unsave` без `user-library-modify`, `recent` без `user-read-recently-played`, `top` без `user-top-read`) — тоже `login` |
 | `no_active_device`, `device_not_found`, `ambiguous_device` | 4 | нет активного устройства; `transfer` не нашёл или нашёл несколько |
 | `rate_limited` | 5 | HTTP 429; поле `error.retry_after` — секунды ожидания |
 | `premium_required` | 6 | нужен Premium |
@@ -241,6 +253,9 @@ Spotify.
 - [x] `album`, `playlist`, `artist` (2026-10-24, Development Mode): альбом (10 треков, `--limit 50`), свой
   плейлист (6 треков), плейлисты других пользователей (`tracks_available:false`), страница артиста с
   `--offset` (33 релиза); `--covers` — 0,2–1,5 с
+- [x] `recent` (страница, `--before`, `--after`, `--limit 50`) и `top tracks` / `top artists` (диапазоны,
+  `--limit 50`, большие `--offset`) на настоящем аккаунте после `login` с правами `user-read-recently-played`
+  и `user-top-read` (2026-10-24)
 - [x] `play-uri <трек> --context <альбом>` (2026-10-24, на колонке): третий трек альбома заиграл в
   контексте альбома, `queue` показала следующие треки альбома по порядку
 - [x] `saved` → `save` → `saved` → `unsave` → `saved` на настоящем аккаунте после `login` с новым правом (ответы `false`, `ok`, `true`, `ok`, `false`); заодно проверить, что Development Mode пропускает `/me/library`
@@ -282,6 +297,10 @@ Spotify.
   плейлистов: у чужого плейлиста ответ 200 только с шапкой (`tracks_available:false`), а у
   редакционных плейлистов Spotify (`37i9dQZ…`) на шапку тоже HTTP 404 — как для несуществующего
   плейлиста, отличить их нельзя. `GET /albums/{id}/tracks` (`limit` 50) и `/artists/{id}` работают.
+- **История и топы (2026-10-24, на настоящем аккаунте).** `recent` листается курсорами времени
+  (`--before` с `cursors.before`), `--after` с самым новым курсором даёт пустой ответ; в 50 проигрышах было 38
+  разных треков (повторы). `top` отдаёт страницы по 50 и любой `--offset` до `total` (у проверенного
+  аккаунта 2039 треков за полгода), то есть список длиннее 50.
 - **Очередь**: Spotify отдаёт не более 20 ближайших элементов; `queue-add` ставит
   трек в начало очереди (его проигрывает следующий `next`).
 - **Библиотека**: `save`/`unsave` идемпотентны (Spotify отвечает 200 и когда трек уже

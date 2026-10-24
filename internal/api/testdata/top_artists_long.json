@@ -1,0 +1,39 @@
+{
+ "type": "artists",
+ "range": "long",
+ "total": 164,
+ "offset": 0,
+ "limit": 5,
+ "artists": [
+  {
+   "uri": "spotify:artist:FAKEARTIST13",
+   "id": "FAKEID16",
+   "name": "Name N36",
+   "cover_url": null
+  },
+  {
+   "uri": "spotify:artist:FAKEARTIST03",
+   "id": "FAKEID17",
+   "name": "Name N06",
+   "cover_url": "https://example.invalid/cover/COVER14.jpg"
+  },
+  {
+   "uri": "spotify:artist:FAKEARTIST14",
+   "id": "FAKEID18",
+   "name": "Name N37",
+   "cover_url": "https://example.invalid/cover/COVER15.jpg"
+  },
+  {
+   "uri": "spotify:artist:FAKEARTIST07",
+   "id": "FAKEID19",
+   "name": "Name N26",
+   "cover_url": "https://example.invalid/cover/COVER16.jpg"
+  },
+  {
+   "uri": "spotify:artist:FAKEARTIST15",
+   "id": "FAKEID20",
+   "name": "Name N38",
+   "cover_url": "https://example.invalid/cover/COVER17.jpg"
+  }
+ ]
+}

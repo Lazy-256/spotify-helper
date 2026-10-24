@@ -62,7 +62,7 @@ func TestAuthorizeURL(t *testing.T) {
 		"client_id": "CID", "response_type": "code",
 		"redirect_uri":          "http://127.0.0.1:8888/callback",
 		"code_challenge_method": "S256", "code_challenge": "CH", "state": "ST",
-		"scope": "user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative user-library-read user-library-modify",
+		"scope": "user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative user-library-read user-library-modify user-read-recently-played user-top-read",
 	}
 	for k, v := range want {
 		if q.Get(k) != v {
@@ -84,11 +84,29 @@ func TestAuthorizeURLAsksForCollaborativePlaylists(t *testing.T) {
 	}
 }
 
-// The collaborative-playlist scope is requested but not required, so a token
-// from before it was added is still complete.
-func TestRequiredScopesLeaveOutCollaborativePlaylists(t *testing.T) {
+func TestAuthorizeURLAsksForHistoryScopes(t *testing.T) {
+	u, err := url.Parse(AuthorizeURL("https://accounts.example", "CID", "http://127.0.0.1:8888/callback", "CH", "ST"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := strings.Fields(u.Query().Get("scope"))
+	for _, want := range []string{"user-read-recently-played", "user-top-read"} {
+		if !slices.Contains(got, want) {
+			t.Errorf("scope %q lacks %s", u.Query().Get("scope"), want)
+		}
+	}
+}
+
+// The collaborative-playlist and history scopes are requested but not required
+// by doctor, so a token from before they were added is still complete.
+func TestRequiredScopesLeaveOutOptionalScopes(t *testing.T) {
 	req := RequiredScopes()
-	if slices.Contains(req, ScopeCollaborativePlaylists) || len(req) != len(Scopes)-1 {
+	for _, optional := range []string{ScopeCollaborativePlaylists, ScopeRecentlyPlayed, ScopeTopRead} {
+		if slices.Contains(req, optional) || !slices.Contains(Scopes, optional) {
+			t.Errorf("%s: required %v of requested %v", optional, req, Scopes)
+		}
+	}
+	if len(req) != len(Scopes)-3 {
 		t.Errorf("required %v of %v", req, Scopes)
 	}
 	if !slices.Contains(req, ScopeLibraryModify) {

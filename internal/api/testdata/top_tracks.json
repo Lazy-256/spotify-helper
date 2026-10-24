@@ -1,0 +1,116 @@
+{
+ "type": "tracks",
+ "range": "medium",
+ "total": 2039,
+ "offset": 0,
+ "limit": 5,
+ "tracks": [
+  {
+   "type": "track",
+   "uri": "spotify:track:FAKETRACK11",
+   "id": "FAKEID11",
+   "name": "Name N22",
+   "artists": [
+    {
+     "name": "Name N23",
+     "uri": "spotify:artist:FAKEARTIST06"
+    }
+   ],
+   "album": {
+    "name": "Name N24",
+    "uri": "spotify:album:FAKEALBUM10"
+   },
+   "duration_ms": 498460,
+   "explicit": false,
+   "cover_url": "https://example.invalid/cover/COVER10.jpg"
+  },
+  {
+   "type": "track",
+   "uri": "spotify:track:FAKETRACK12",
+   "id": "FAKEID12",
+   "name": "Name N25",
+   "artists": [
+    {
+     "name": "Name N26",
+     "uri": "spotify:artist:FAKEARTIST07"
+    }
+   ],
+   "album": {
+    "name": "Name N25",
+    "uri": "spotify:album:FAKEALBUM11"
+   },
+   "duration_ms": 324720,
+   "explicit": false,
+   "cover_url": "https://example.invalid/cover/COVER11.jpg"
+  },
+  {
+   "type": "track",
+   "uri": "spotify:track:FAKETRACK13",
+   "id": "FAKEID13",
+   "name": "Name N27",
+   "artists": [
+    {
+     "name": "Name N28",
+     "uri": "spotify:artist:FAKEARTIST08"
+    }
+   ],
+   "album": {
+    "name": "Name N27",
+    "uri": "spotify:album:FAKEALBUM12"
+   },
+   "duration_ms": 233000,
+   "explicit": false,
+   "cover_url": "https://example.invalid/cover/COVER12.jpg"
+  },
+  {
+   "type": "track",
+   "uri": "spotify:track:FAKETRACK14",
+   "id": "FAKEID14",
+   "name": "Name N29",
+   "artists": [
+    {
+     "name": "Name N06",
+     "uri": "spotify:artist:FAKEARTIST03"
+    }
+   ],
+   "album": {
+    "name": "Name N21",
+    "uri": "spotify:album:FAKEALBUM09"
+   },
+   "duration_ms": 300350,
+   "explicit": false,
+   "cover_url": "https://example.invalid/cover/COVER09.jpg"
+  },
+  {
+   "type": "track",
+   "uri": "spotify:track:FAKETRACK15",
+   "id": "FAKEID15",
+   "name": "Name N30",
+   "artists": [
+    {
+     "name": "Name N31",
+     "uri": "spotify:artist:FAKEARTIST09"
+    },
+    {
+     "name": "Name N32",
+     "uri": "spotify:artist:FAKEARTIST10"
+    },
+    {
+     "name": "Name N33",
+     "uri": "spotify:artist:FAKEARTIST11"
+    },
+    {
+     "name": "Name N34",
+     "uri": "spotify:artist:FAKEARTIST12"
+    }
+   ],
+   "album": {
+    "name": "Name N35",
+    "uri": "spotify:album:FAKEALBUM13"
+   },
+   "duration_ms": 167533,
+   "explicit": false,
+   "cover_url": "https://example.invalid/cover/COVER13.jpg"
+  }
+ ]
+}
