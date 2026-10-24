@@ -17,15 +17,19 @@ The helper SHALL read `client_id` from `$XDG_CONFIG_HOME/spotify-helper/config.t
 - **THEN** the helper uses the environment value
 
 ### Requirement: Login runs the PKCE authorization flow
-`spotify-helper login` SHALL perform the OAuth 2.0 Authorization Code flow with PKCE (`S256`) and no client secret. It SHALL request the scopes `user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private user-library-read user-library-modify`, include a random `state` value, listen for the redirect on the host and port of the redirect URI bound to `127.0.0.1` only, print the authorization URL to stderr, and try to open it in the user's browser. It SHALL accept only a callback whose `state` matches, exchange the code for tokens, store them, and output `{"ok":true,"scopes":["…"]}` with the granted scopes. It SHALL stop listening after the callback is handled or after 5 minutes.
+`spotify-helper login` SHALL perform the OAuth 2.0 Authorization Code flow with PKCE (`S256`) and no client secret. It SHALL request the scopes `user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative user-library-read user-library-modify`, include a random `state` value, listen for the redirect on the host and port of the redirect URI bound to `127.0.0.1` only, print the authorization URL to stderr, and try to open it in the user's browser. It SHALL accept only a callback whose `state` matches, exchange the code for tokens, store them, and output `{"ok":true,"scopes":["…"]}` with the granted scopes. It SHALL stop listening after the callback is handled or after 5 minutes.
 
 #### Scenario: Successful login
 - **WHEN** the user approves the request in the browser
-- **THEN** the helper stores the tokens, outputs `{"ok":true,"scopes":[…]}` including `user-library-modify`, exits 0, and no longer listens on the port
+- **THEN** the helper stores the tokens, outputs `{"ok":true,"scopes":[…]}` including `user-library-modify` and `playlist-read-collaborative`, exits 0, and no longer listens on the port
 
 #### Scenario: Authorization URL asks for the write scope
 - **WHEN** `login` prints the authorization URL
 - **THEN** its `scope` parameter contains `user-library-modify`
+
+#### Scenario: Authorization URL asks for the collaborative-playlist scope
+- **WHEN** `login` prints the authorization URL
+- **THEN** its `scope` parameter contains `playlist-read-collaborative`
 
 #### Scenario: User denies access
 - **WHEN** the redirect carries `error=access_denied`
@@ -46,6 +50,10 @@ The helper SHALL read `client_id` from `$XDG_CONFIG_HOME/spotify-helper/config.t
 #### Scenario: Token from an earlier release
 - **WHEN** the stored token was issued before `user-library-modify` was requested
 - **THEN** `doctor` lists `scopes_missing` in `problems` until the user runs `login` again
+
+#### Scenario: A token without the collaborative-playlist scope keeps working
+- **WHEN** the stored token was issued before `playlist-read-collaborative` was requested
+- **THEN** every command that worked before still works, `doctor` does not list `scopes_missing` because of it, and `playlist` does not require it
 
 ### Requirement: Tokens are stored privately
 The helper SHALL store tokens in `$XDG_CONFIG_HOME/spotify-helper/token.json` containing at least the access token, refresh token, expiry time, granted scopes and the client ID they were issued for. The directory SHALL have mode `0700` and the file mode `0600`, and the file SHALL be replaced atomically so a crash never leaves a partial file.
