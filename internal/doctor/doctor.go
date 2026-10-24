@@ -101,7 +101,7 @@ func Build(in Inputs) Report {
 				r.Problems = append(r.Problems, ProblemNotAuthenticated)
 			}
 		}
-		for _, s := range auth.Scopes {
+		for _, s := range auth.RequiredScopes() {
 			if !slices.Contains(t.Scopes, s) {
 				r.Problems = append(r.Problems, ProblemScopesMissing)
 				break

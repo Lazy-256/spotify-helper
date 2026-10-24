@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -61,7 +62,7 @@ func TestAuthorizeURL(t *testing.T) {
 		"client_id": "CID", "response_type": "code",
 		"redirect_uri":          "http://127.0.0.1:8888/callback",
 		"code_challenge_method": "S256", "code_challenge": "CH", "state": "ST",
-		"scope": "user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private user-library-read user-library-modify",
+		"scope": "user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative user-library-read user-library-modify",
 	}
 	for k, v := range want {
 		if q.Get(k) != v {
@@ -70,6 +71,31 @@ func TestAuthorizeURL(t *testing.T) {
 	}
 	if q.Has("client_secret") {
 		t.Error("PKCE flow must not use a client secret")
+	}
+}
+
+func TestAuthorizeURLAsksForCollaborativePlaylists(t *testing.T) {
+	u, err := url.Parse(AuthorizeURL("https://accounts.example", "CID", "http://127.0.0.1:8888/callback", "CH", "ST"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(strings.Fields(u.Query().Get("scope")), "playlist-read-collaborative") {
+		t.Errorf("scope %q lacks playlist-read-collaborative", u.Query().Get("scope"))
+	}
+}
+
+// The collaborative-playlist scope is requested but not required, so a token
+// from before it was added is still complete.
+func TestRequiredScopesLeaveOutCollaborativePlaylists(t *testing.T) {
+	req := RequiredScopes()
+	if slices.Contains(req, ScopeCollaborativePlaylists) || len(req) != len(Scopes)-1 {
+		t.Errorf("required %v of %v", req, Scopes)
+	}
+	if !slices.Contains(req, ScopeLibraryModify) {
+		t.Errorf("user-library-modify must stay required: %v", req)
+	}
+	if !slices.Contains(Scopes, ScopeCollaborativePlaylists) {
+		t.Errorf("not requested at login: %v", Scopes)
 	}
 }
 

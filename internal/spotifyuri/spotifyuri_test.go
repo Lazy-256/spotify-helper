@@ -21,6 +21,12 @@ func TestParse(t *testing.T) {
 		{"https://open.spotify.com/intl-pt-br/artist/abc", "spotify:artist:abc"},
 		{"http://open.spotify.com/episode/abc/", "spotify:episode:abc"},
 		{"https://open.spotify.com/show/abc", "spotify:show:abc"},
+		{"spotify:artist:0TnOYISbd1XYRBk9myaseg", "spotify:artist:0TnOYISbd1XYRBk9myaseg"},
+		{"https://open.spotify.com/album/abc?si=xyz", "spotify:album:abc"},
+		{"https://open.spotify.com/intl-de/album/abc?si=xyz", "spotify:album:abc"},
+		{"https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M?si=1", "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M"},
+		{"https://open.spotify.com/intl-pt-br/playlist/abc", "spotify:playlist:abc"},
+		{"https://open.spotify.com/artist/abc?si=xyz", "spotify:artist:abc"},
 	}
 	for _, tt := range tests {
 		got, err := Parse(tt.in)
@@ -67,6 +73,52 @@ func TestIsContext(t *testing.T) {
 	} {
 		if got := (URI{Type: typ, ID: "x"}).IsContext(); got != want {
 			t.Errorf("%s IsContext = %v, want %v", typ, got, want)
+		}
+	}
+}
+
+// The catalog commands accept exactly one of album, playlist and artist each.
+func TestParseAllowedCatalogTypes(t *testing.T) {
+	cases := []struct {
+		allowed Type
+		in      string
+		want    string
+	}{
+		{Album, "spotify:album:abc", "spotify:album:abc"},
+		{Album, "https://open.spotify.com/intl-nl/album/abc?si=x", "spotify:album:abc"},
+		{Playlist, "spotify:playlist:abc", "spotify:playlist:abc"},
+		{Playlist, "https://open.spotify.com/playlist/abc?si=x", "spotify:playlist:abc"},
+		{Artist, "spotify:artist:abc", "spotify:artist:abc"},
+		{Artist, "https://open.spotify.com/intl-pt-br/artist/abc?si=x", "spotify:artist:abc"},
+	}
+	for _, tt := range cases {
+		u, err := ParseAllowed(tt.in, tt.allowed)
+		if err != nil || u.String() != tt.want {
+			t.Errorf("ParseAllowed(%q, %s) = %v, %v; want %s", tt.in, tt.allowed, u, err, tt.want)
+		}
+	}
+
+	for _, allowed := range []Type{Album, Playlist, Artist} {
+		for _, in := range []string{
+			"spotify:track:abc", "spotify:episode:abc", "spotify:show:abc",
+			"https://open.spotify.com/track/abc", "hello",
+		} {
+			_, err := ParseAllowed(in, allowed)
+			var oe *output.Error
+			if !errors.As(err, &oe) || oe.Code != output.CodeUsage {
+				t.Errorf("ParseAllowed(%q, %s): want usage error, got %v", in, allowed, err)
+			}
+		}
+	}
+	// ...and not each other.
+	for _, tt := range [][2]string{
+		{"spotify:playlist:abc", string(Album)},
+		{"spotify:artist:abc", string(Album)},
+		{"spotify:album:abc", string(Playlist)},
+		{"spotify:album:abc", string(Artist)},
+	} {
+		if _, err := ParseAllowed(tt[0], Type(tt[1])); err == nil {
+			t.Errorf("%s should not be accepted as %s", tt[0], tt[1])
 		}
 	}
 }

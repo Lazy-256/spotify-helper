@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"flag"
 	"regexp"
 	"strconv"
 
@@ -40,7 +41,7 @@ func init() {
 	register(&command{name: "seek", usage: "<ms|+ms|-ms> [--device ID]", summary: "seek to a position or by an offset", run: runSeek})
 	register(&command{name: "shuffle", usage: "<on|off|toggle> [--device ID]", summary: "set shuffle", run: runShuffle})
 	register(&command{name: "repeat", usage: "<off|context|track|cycle> [--device ID]", summary: "set repeat mode", run: runRepeat})
-	register(&command{name: "play-uri", usage: "<uri|link> [--device ID]", summary: "start playing a track, album, playlist, artist, episode or show", run: runPlayURI})
+	register(&command{name: "play-uri", usage: "<uri|link> [--context <album|playlist uri|link>] [--device ID]", summary: "start playing a track, album, playlist, artist, episode or show", run: runPlayURI})
 }
 
 // withClient builds the API client and runs fn under the command timeout.
@@ -280,9 +281,20 @@ func runRepeat(env *Env, args []string) error {
 }
 
 func runPlayURI(env *Env, args []string) error {
-	pos, f, err := parseCommon("play-uri", "<uri|link> [--device ID]", args, 1, 1, flagSet{device: true})
+	var contextArg string
+	var contextSet bool
+	pos, f, err := parseCommon("play-uri", "<uri|link> [--context <album|playlist uri|link>] [--device ID]", args, 1, 1,
+		flagSet{device: true, extra: func(fs *flag.FlagSet) {
+			fs.Func("context", "album or playlist to start at the track or episode", func(v string) error {
+				contextArg, contextSet = v, true
+				return nil
+			})
+		}})
 	if err != nil {
 		return err
+	}
+	if contextSet {
+		return playFrom(env, pos[0], contextArg, f.device)
 	}
 	u, err := spotifyuri.ParseAllowed(pos[0],
 		spotifyuri.Track, spotifyuri.Episode, spotifyuri.Album,
@@ -292,6 +304,25 @@ func runPlayURI(env *Env, args []string) error {
 	}
 	return withClient(env, func(ctx context.Context, c *api.Client) error {
 		if err := c.PlayURI(ctx, u, f.device); err != nil {
+			return err
+		}
+		return output.WriteOK(env.Stdout)
+	})
+}
+
+// playFrom is `play-uri <item> --context <uri>`: the album or playlist plays
+// from the item on. Both values are checked before anything is sent.
+func playFrom(env *Env, itemArg, contextArg, device string) error {
+	item, err := spotifyuri.ParseAllowed(itemArg, spotifyuri.Track, spotifyuri.Episode)
+	if err != nil {
+		return err
+	}
+	within, err := spotifyuri.ParseAllowed(contextArg, spotifyuri.Album, spotifyuri.Playlist)
+	if err != nil {
+		return err
+	}
+	return withClient(env, func(ctx context.Context, c *api.Client) error {
+		if err := c.PlayFrom(ctx, item, within, device); err != nil {
 			return err
 		}
 		return output.WriteOK(env.Stdout)

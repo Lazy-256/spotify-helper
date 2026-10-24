@@ -195,3 +195,22 @@ func TestDoctorTokenFromBeforeLibraryModify(t *testing.T) {
 		t.Errorf("problems: %v", got)
 	}
 }
+
+// A token issued before playlist-read-collaborative was requested is fine:
+// that scope is requested at login but never required.
+func TestDoctorTokenWithoutCollaborativePlaylists(t *testing.T) {
+	env, _, out, errb := spotifyEnv(t)
+	var scopes []string
+	for _, s := range auth.Scopes {
+		if s != auth.ScopeCollaborativePlaylists {
+			scopes = append(scopes, s)
+		}
+	}
+	store := &auth.Store{Path: tokenPath(env)}
+	_ = store.Save(&auth.Token{AccessToken: "A", RefreshToken: "R", ExpiresAt: env.Now().Unix() + 100,
+		ClientID: "test-client-id", Scopes: scopes})
+	rep := parse(t, runOK(t, env, out, errb, "doctor"))
+	if got := problems(t, rep); len(got) != 0 || rep["ok"] != true {
+		t.Errorf("problems: %v", got)
+	}
+}

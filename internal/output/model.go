@@ -211,3 +211,70 @@ func (p *AlbumPage) Covers() []*Cover {
 	}
 	return out
 }
+
+// AlbumContents is the `album` command: the album and one page of its tracks.
+type AlbumContents struct {
+	Album  AlbumEntry `json:"album"`
+	Tracks []Item     `json:"tracks"`
+	Total  int        `json:"total"`
+	Offset int        `json:"offset"`
+	Limit  int        `json:"limit"`
+}
+
+// Covers returns the album's cover and the cover of every track.
+func (a *AlbumContents) Covers() []*Cover {
+	out := make([]*Cover, 0, len(a.Tracks)+1)
+	out = append(out, &a.Album.Cover)
+	for i := range a.Tracks {
+		out = append(out, &a.Tracks[i].Cover)
+	}
+	return out
+}
+
+// PlaylistHeader is a playlist entry that also says whether others may edit
+// it, so a caller can tell "not allowed" from "log in again".
+type PlaylistHeader struct {
+	PlaylistEntry
+	Collaborative bool `json:"collaborative"`
+}
+
+// PlaylistContents is the `playlist` command. TracksAvailable is false when
+// Spotify gave only the playlist's metadata; Tracks is then empty.
+type PlaylistContents struct {
+	Playlist        PlaylistHeader `json:"playlist"`
+	TracksAvailable bool           `json:"tracks_available"`
+	Tracks          []Item         `json:"tracks"`
+	Total           int            `json:"total"`
+	Offset          int            `json:"offset"`
+	Limit           int            `json:"limit"`
+}
+
+// Covers returns the playlist's cover and the cover of every track.
+func (p *PlaylistContents) Covers() []*Cover {
+	out := make([]*Cover, 0, len(p.Tracks)+1)
+	out = append(out, &p.Playlist.Cover)
+	for i := range p.Tracks {
+		out = append(out, &p.Tracks[i].Cover)
+	}
+	return out
+}
+
+// ArtistContents is the `artist` command: the artist and one page of their
+// albums and singles.
+type ArtistContents struct {
+	Artist ArtistEntry  `json:"artist"`
+	Albums []AlbumEntry `json:"albums"`
+	Total  int          `json:"total"`
+	Offset int          `json:"offset"`
+	Limit  int          `json:"limit"`
+}
+
+// Covers returns the artist's cover and the cover of every album.
+func (a *ArtistContents) Covers() []*Cover {
+	out := make([]*Cover, 0, len(a.Albums)+1)
+	out = append(out, &a.Artist.Cover)
+	for i := range a.Albums {
+		out = append(out, &a.Albums[i].Cover)
+	}
+	return out
+}

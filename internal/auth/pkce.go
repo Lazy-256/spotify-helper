@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"net/url"
+	"slices"
 	"strings"
 )
 
@@ -16,8 +17,21 @@ var Scopes = []string{
 	"user-modify-playback-state",
 	"user-read-currently-playing",
 	"playlist-read-private",
+	ScopeCollaborativePlaylists,
 	"user-library-read",
 	ScopeLibraryModify,
+}
+
+// ScopeCollaborativePlaylists lets `playlist` read collaborative playlists.
+// It is requested but never required: tokens issued before it was added keep
+// working, and `playlist` reports `collaborative` so a caller can suggest
+// logging in again. Doctor therefore does not check it; see RequiredScopes.
+const ScopeCollaborativePlaylists = "playlist-read-collaborative"
+
+// RequiredScopes are the requested scopes a stored token must have: all of
+// Scopes except the ones that are only nice to have.
+func RequiredScopes() []string {
+	return slices.DeleteFunc(slices.Clone(Scopes), func(s string) bool { return s == ScopeCollaborativePlaylists })
 }
 
 // ScopeLibraryModify lets save and unsave change the user's library. Tokens

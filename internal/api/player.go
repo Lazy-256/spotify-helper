@@ -144,6 +144,18 @@ func (c *Client) PlayURI(ctx context.Context, u spotifyuri.URI, device string) e
 	return err
 }
 
+// PlayFrom starts the album or playlist context at item ("play from here").
+// Spotify takes the position as an offset naming the item; it answers with an
+// error when the item is not part of the context.
+func (c *Client) PlayFrom(ctx context.Context, item, within spotifyuri.URI, device string) error {
+	body := map[string]any{
+		"context_uri": within.String(),
+		"offset":      map[string]string{"uri": item.String()},
+	}
+	_, err := c.do(ctx, http.MethodPut, "/me/player/play", deviceQuery(device, nil), body, nil)
+	return err
+}
+
 // Devices lists the user's Connect devices in Spotify's order.
 func (c *Client) Devices(ctx context.Context) ([]output.Device, error) {
 	var resp struct {

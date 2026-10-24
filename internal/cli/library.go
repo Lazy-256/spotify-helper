@@ -19,9 +19,15 @@ func init() {
 
 // pageArgs parses the paging flags shared by the library commands.
 func pageArgs(name string, args []string) (limit, offset int, f commonFlags, err error) {
+	_, limit, offset, f, err = pagedArgs(name, "[--limit 1-50] [--offset N] [--covers]", args, 0, 0)
+	return
+}
+
+// pagedArgs is pageArgs for commands that also take positionals, such as the
+// URI of album, playlist and artist.
+func pagedArgs(name, usage string, args []string, minPos, maxPos int) (pos []string, limit, offset int, f commonFlags, err error) {
 	limit = api.MaxLibraryLimit
-	usage := "[--limit 1-50] [--offset N] [--covers]"
-	_, f, err = parseCommon(name, usage, args, 0, 0, flagSet{covers: true, extra: func(fs *flag.FlagSet) {
+	pos, f, err = parseCommon(name, usage, args, minPos, maxPos, flagSet{covers: true, extra: func(fs *flag.FlagSet) {
 		fs.IntVar(&limit, "limit", api.MaxLibraryLimit, "page size, 1-50")
 		fs.IntVar(&offset, "offset", 0, "index of the first entry")
 	}})
