@@ -16,6 +16,7 @@ func TestExitCodes(t *testing.T) {
 	}{
 		{CodeInternal, 1},
 		{CodeAPIError, 1},
+		{CodeTracksUnavailable, 1},
 		{CodeUsage, 2},
 		{CodeNotConfigured, 3},
 		{CodeNotAuthenticated, 3},
@@ -97,5 +98,53 @@ func TestWriteOKAndNoHTMLEscape(t *testing.T) {
 	_ = WriteJSON(&buf, map[string]string{"n": "A&B <x>"})
 	if buf.String() != "{\"n\":\"A&B <x>\"}\n" {
 		t.Errorf("HTML must not be escaped, got %q", buf.String())
+	}
+}
+
+func TestErrorAddedAndTotal(t *testing.T) {
+	var buf bytes.Buffer
+	e := RateLimited(12)
+	e.Added, e.Total = 8, 30
+	WriteError(&buf, e)
+	var doc struct {
+		Error map[string]any `json:"error"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &doc); err != nil {
+		t.Fatal(err)
+	}
+	if doc.Error["added"] != float64(8) || doc.Error["total"] != float64(30) || doc.Error["retry_after"] != float64(12) {
+		t.Errorf("got %v", doc.Error)
+	}
+
+	buf.Reset()
+	doc.Error = nil
+	WriteError(&buf, Errorf(CodeTracksUnavailable, "no items"))
+	if err := json.Unmarshal(buf.Bytes(), &doc); err != nil {
+		t.Fatal(err)
+	}
+	if doc.Error["code"] != "tracks_unavailable" {
+		t.Errorf("got %v", doc.Error)
+	}
+	for _, k := range []string{"added", "total", "retry_after"} {
+		if _, ok := doc.Error[k]; ok {
+			t.Errorf("%s must be absent unless set: %v", k, doc.Error)
+		}
+	}
+}
+
+func TestQueueAddAllResultShape(t *testing.T) {
+	b, err := Encode(QueueAddAllResult{OK: true, URI: "spotify:album:a", Added: 3, Skipped: 1, Total: 9, Offset: 2, Truncated: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"ok":true,"uri":"spotify:album:a","added":3,"skipped":1,"total":9,"offset":2,"truncated":true}` + "\n"
+	if string(b) != want {
+		t.Errorf("got %s, want %s", b, want)
+	}
+	b, _ = Encode(QueueAddAllResult{OK: true})
+	for _, k := range []string{`"added":0`, `"skipped":0`, `"total":0`, `"offset":0`, `"truncated":false`} {
+		if !strings.Contains(string(b), k) {
+			t.Errorf("zero values must be written: %s lacks %s", b, k)
+		}
 	}
 }

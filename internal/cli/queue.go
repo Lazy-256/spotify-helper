@@ -2,15 +2,19 @@ package cli
 
 import (
 	"context"
+	"flag"
 
 	"github.com/Lazy-256/spotify-helper/internal/api"
 	"github.com/Lazy-256/spotify-helper/internal/output"
 	"github.com/Lazy-256/spotify-helper/internal/spotifyuri"
 )
 
+const queueAddAllUsage = "<album|playlist uri|link> [--offset N] [--device ID]"
+
 func init() {
 	register(&command{name: "queue", usage: "[--covers]", summary: "show what is playing now and what comes next", run: runQueue})
 	register(&command{name: "queue-add", usage: "<track-or-episode uri|link> [--device ID]", summary: "append a track or episode to the queue", run: runQueueAdd})
+	register(&command{name: "queue-add-all", usage: queueAddAllUsage, summary: "append an album or playlist (up to 100 items) to the queue", run: runQueueAddAll})
 }
 
 func runQueue(env *Env, args []string) error {
@@ -47,5 +51,29 @@ func runQueueAdd(env *Env, args []string) error {
 			OK  bool   `json:"ok"`
 			URI string `json:"uri"`
 		}{true, u.String()})
+	})
+}
+
+func runQueueAddAll(env *Env, args []string) error {
+	var offset int
+	pos, f, err := parseCommon("queue-add-all", queueAddAllUsage, args, 1, 1, flagSet{device: true, extra: func(fs *flag.FlagSet) {
+		fs.IntVar(&offset, "offset", 0, "position of the first item to queue")
+	}})
+	if err != nil {
+		return err
+	}
+	if offset < 0 {
+		return output.Usage("--offset must not be negative, got %d", offset)
+	}
+	u, err := spotifyuri.ParseAllowed(pos[0], spotifyuri.Album, spotifyuri.Playlist)
+	if err != nil {
+		return err
+	}
+	return withClient(env, func(ctx context.Context, c *api.Client) error {
+		res, err := c.QueueAddAll(ctx, u, offset, f.device)
+		if err != nil {
+			return err
+		}
+		return output.WriteJSON(env.Stdout, res)
 	})
 }

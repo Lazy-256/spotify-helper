@@ -29,6 +29,9 @@ const (
 	CodeRateLimited      Code = "rate_limited"
 	CodePremiumRequired  Code = "premium_required"
 	CodeNetworkError     Code = "network_error"
+	// CodeTracksUnavailable means Spotify does not serve the items of a
+	// playlist to this app; exit code 1 comes from the default branch.
+	CodeTracksUnavailable Code = "tracks_unavailable"
 )
 
 // ExitCode returns the process exit code for the error code.
@@ -57,6 +60,11 @@ type Error struct {
 	Message string
 	// RetryAfter is the number of seconds to wait; set for CodeRateLimited.
 	RetryAfter int
+	// Added and Total are set only by queue-add-all when it fails after some
+	// items were queued: how many are already in the queue, and the size of the
+	// container when known. Both are omitted from the JSON when zero.
+	Added int
+	Total int
 }
 
 func (e *Error) Error() string { return string(e.Code) + ": " + e.Message }
@@ -138,13 +146,15 @@ type errorBody struct {
 	Code       Code   `json:"code"`
 	Message    string `json:"message"`
 	RetryAfter int    `json:"retry_after,omitempty"`
+	Added      int    `json:"added,omitempty"`
+	Total      int    `json:"total,omitempty"`
 }
 
 // WriteError writes the failure document {"error":{…}} to w.
 func WriteError(w io.Writer, e *Error) {
 	b, err := Encode(struct {
 		Error errorBody `json:"error"`
-	}{errorBody{Code: e.Code, Message: e.Message, RetryAfter: e.RetryAfter}})
+	}{errorBody{Code: e.Code, Message: e.Message, RetryAfter: e.RetryAfter, Added: e.Added, Total: e.Total}})
 	if err != nil {
 		// Encoding a plain struct cannot realistically fail; keep the contract
 		// even then.

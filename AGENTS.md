@@ -73,7 +73,7 @@ cmd/spotify-helper/    main: только cli.Run
 internal/cli/          подкоманды, Env (потоки, окружение, часы, HTTP, браузер), разбор аргументов
 internal/config/       XDG-пути, config.toml (подмножество TOML), client_id
 internal/auth/         PKCE, callback-сервер, token endpoint, хранилище токена, обновление под flock
-internal/api/          клиент Web API, маппинг ошибок, wire → типы вывода, player/search/queue/library/catalog/history
+internal/api/          клиент Web API, маппинг ошибок, wire → типы вывода, player/search/queue (в т. ч. `QueueAddAll`)/library/catalog/history
 internal/covers/       кэш обложек и пост-обработка --covers
 internal/doctor/       офлайн-отчёт
 internal/ratelimit/    кулдаун после 429 на диске
@@ -82,6 +82,17 @@ internal/spotifyuri/   разбор spotify:… и ссылок open.spotify.com
 internal/output/       контракт: типы вывода, Error, коды выхода, JSON-писатели
 openspec/              спеки и изменения (на английском)
 ```
+
+`queue-add-all` ставит альбом или плейлист в очередь по одному элементу, строго по порядку,
+не больше 100 за запуск (`api.MaxQueueAll`); при сбое после первого элемента ошибка несёт
+`added` и `total` (`output.Error.Added/Total`), код `tracks_unavailable` — плейлист без
+доступных элементов. Живая проверка (2026-10-28, задача 4.1 изменения `add-queue-all`): альбом из 24
+треков встал за 4,6 с (около 190 мс на элемент) в порядке альбома, `--offset 3` дал 21 элемент за 3,9 с,
+два прогона по 100 элементов с минутной паузой между ними прошли без 429; а 79 запросов за 16,6 с
+сразу после ещё 45 запросов за предыдущую минуту получили 429 (`retry_after` 30) с `added` 79 и `total` 110, то
+есть лимит Spotify скользящий и складывается из близких запусков; пауз между запросами в хелпере нет. Чужой
+плейлист даёт `tracks_unavailable` (0,24 с, без запросов в очередь), редакционный (`37i9dQZ…`) — `api_error`
+с 404, как и `playlist`.
 
 Правила кода:
 - Тестируемость через `cli.Env`: все обращения наружу идут через него; тесты

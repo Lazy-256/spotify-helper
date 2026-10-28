@@ -166,6 +166,20 @@ type QueueResult struct {
 	Queue      []Item `json:"queue"`
 }
 
+// QueueAddAllResult is the `queue-add-all` command. Total is the number of
+// items Spotify reports for the container, Skipped the examined entries that
+// cannot be queued (local files, entries without a URI), and Truncated is true
+// when the cap stopped the run with entries left unexamined.
+type QueueAddAllResult struct {
+	OK        bool   `json:"ok"`
+	URI       string `json:"uri"`
+	Added     int    `json:"added"`
+	Skipped   int    `json:"skipped"`
+	Total     int    `json:"total"`
+	Offset    int    `json:"offset"`
+	Truncated bool   `json:"truncated"`
+}
+
 // Covers returns every cover in the queue.
 func (q *QueueResult) Covers() []*Cover {
 	var out []*Cover
