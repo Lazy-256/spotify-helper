@@ -65,6 +65,10 @@ type Error struct {
 	// container when known. Both are omitted from the JSON when zero.
 	Added int
 	Total int
+	// Skipped is set only by queue-clear when it fails after it advanced past
+	// some entries: how many `next` requests were already sent. Omitted from
+	// the JSON when zero.
+	Skipped int
 }
 
 func (e *Error) Error() string { return string(e.Code) + ": " + e.Message }
@@ -148,13 +152,14 @@ type errorBody struct {
 	RetryAfter int    `json:"retry_after,omitempty"`
 	Added      int    `json:"added,omitempty"`
 	Total      int    `json:"total,omitempty"`
+	Skipped    int    `json:"skipped,omitempty"`
 }
 
 // WriteError writes the failure document {"error":{…}} to w.
 func WriteError(w io.Writer, e *Error) {
 	b, err := Encode(struct {
 		Error errorBody `json:"error"`
-	}{errorBody{Code: e.Code, Message: e.Message, RetryAfter: e.RetryAfter, Added: e.Added, Total: e.Total}})
+	}{errorBody{Code: e.Code, Message: e.Message, RetryAfter: e.RetryAfter, Added: e.Added, Total: e.Total, Skipped: e.Skipped}})
 	if err != nil {
 		// Encoding a plain struct cannot realistically fail; keep the contract
 		// even then.

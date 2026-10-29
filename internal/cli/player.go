@@ -5,6 +5,7 @@ import (
 	"flag"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/Lazy-256/spotify-helper/internal/api"
 	"github.com/Lazy-256/spotify-helper/internal/output"
@@ -46,11 +47,21 @@ func init() {
 
 // withClient builds the API client and runs fn under the command timeout.
 func withClient(env *Env, fn func(ctx context.Context, c *api.Client) error) error {
+	return withClientBudget(env, opTimeout, fn)
+}
+
+// withBulkClient is withClient for the commands that send many requests in a
+// row; they get bulkTimeout for the whole run.
+func withBulkClient(env *Env, fn func(ctx context.Context, c *api.Client) error) error {
+	return withClientBudget(env, bulkTimeout, fn)
+}
+
+func withClientBudget(env *Env, budget time.Duration, fn func(ctx context.Context, c *api.Client) error) error {
 	c, _, err := env.apiClient()
 	if err != nil {
 		return err
 	}
-	ctx, cancel := opContext()
+	ctx, cancel := context.WithTimeout(context.Background(), budget)
 	defer cancel()
 	return fn(ctx, c)
 }

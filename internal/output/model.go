@@ -180,6 +180,15 @@ type QueueAddAllResult struct {
 	Truncated bool   `json:"truncated"`
 }
 
+// QueueClearResult is the `queue-clear` command. Skipped is the number of
+// `next` requests sent, and Empty is true when the last queue read showed no
+// entry; a run that stopped at the cap has Empty false.
+type QueueClearResult struct {
+	OK      bool `json:"ok"`
+	Skipped int  `json:"skipped"`
+	Empty   bool `json:"empty"`
+}
+
 // Covers returns every cover in the queue.
 func (q *QueueResult) Covers() []*Cover {
 	var out []*Cover

@@ -47,6 +47,8 @@ func newClient(t *testing.T, h http.HandlerFunc) (*Client, *atomic.Int32, *clock
 		Tokens: fixedToken("TOK"),
 		Gate:   &ratelimit.Gate{Path: filepath.Join(t.TempDir(), "rl.json"), Now: clk.now},
 		Now:    clk.now,
+
+		SettleDelay: time.Nanosecond,
 	}, &n, clk
 }
 

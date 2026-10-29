@@ -15,6 +15,7 @@ func init() {
 	register(&command{name: "queue", usage: "[--covers]", summary: "show what is playing now and what comes next", run: runQueue})
 	register(&command{name: "queue-add", usage: "<track-or-episode uri|link> [--device ID]", summary: "append a track or episode to the queue", run: runQueueAdd})
 	register(&command{name: "queue-add-all", usage: queueAddAllUsage, summary: "append an album or playlist (up to 100 items) to the queue", run: runQueueAddAll})
+	register(&command{name: "queue-clear", usage: "[--device ID]", summary: "drop the playback context and play through the queue (up to 100 entries), then pause", run: runQueueClear})
 }
 
 func runQueue(env *Env, args []string) error {
@@ -69,8 +70,22 @@ func runQueueAddAll(env *Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	return withClient(env, func(ctx context.Context, c *api.Client) error {
+	return withBulkClient(env, func(ctx context.Context, c *api.Client) error {
 		res, err := c.QueueAddAll(ctx, u, offset, f.device)
+		if err != nil {
+			return err
+		}
+		return output.WriteJSON(env.Stdout, res)
+	})
+}
+
+func runQueueClear(env *Env, args []string) error {
+	_, f, err := parseCommon("queue-clear", "[--device ID]", args, 0, 0, flagSet{device: true})
+	if err != nil {
+		return err
+	}
+	return withBulkClient(env, func(ctx context.Context, c *api.Client) error {
+		res, err := c.QueueClear(ctx, f.device)
 		if err != nil {
 			return err
 		}

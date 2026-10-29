@@ -45,6 +45,9 @@ type Env struct {
 
 	// LoginTimeout bounds how long `login` waits for the browser.
 	LoginTimeout time.Duration
+
+	// SettleDelay is passed to the API client (see api.Client.SettleDelay).
+	SettleDelay time.Duration
 }
 
 // DefaultEnv returns the production environment.

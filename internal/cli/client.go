@@ -10,8 +10,14 @@ import (
 	"github.com/Lazy-256/spotify-helper/internal/config"
 )
 
-// opTimeout bounds one whole command, including a token refresh.
-const opTimeout = 30 * time.Second
+const (
+	// opTimeout bounds one whole command, including a token refresh.
+	opTimeout = 30 * time.Second
+	// bulkTimeout bounds the commands that send up to a hundred sequential
+	// requests (queue-add-all, queue-clear): 100 `next` take about 45 s. Every
+	// request still has its own 10 s timeout.
+	bulkTimeout = 120 * time.Second
+)
 
 func opContext() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), opTimeout)
@@ -35,6 +41,8 @@ func (e *Env) apiClient() (*api.Client, config.Paths, error) {
 		Tokens: mgr,
 		Gate:   e.gate(p),
 		Now:    e.Now,
+
+		SettleDelay: e.SettleDelay,
 	}, p, nil
 }
 

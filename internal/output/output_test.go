@@ -148,3 +148,45 @@ func TestQueueAddAllResultShape(t *testing.T) {
 		}
 	}
 }
+
+func TestErrorSkipped(t *testing.T) {
+	var buf bytes.Buffer
+	e := RateLimited(12)
+	e.Skipped = 30
+	WriteError(&buf, e)
+	var doc struct {
+		Error map[string]any `json:"error"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &doc); err != nil {
+		t.Fatal(err)
+	}
+	if doc.Error["skipped"] != float64(30) || doc.Error["retry_after"] != float64(12) {
+		t.Errorf("got %v", doc.Error)
+	}
+
+	buf.Reset()
+	doc.Error = nil
+	WriteError(&buf, RateLimited(5))
+	if err := json.Unmarshal(buf.Bytes(), &doc); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := doc.Error["skipped"]; ok {
+		t.Errorf("skipped must be absent unless set: %v", doc.Error)
+	}
+}
+
+func TestQueueClearResultShape(t *testing.T) {
+	b, err := Encode(QueueClearResult{OK: true, Skipped: 37, Empty: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"ok":true,"skipped":37,"empty":true}` + "\n"; string(b) != want {
+		t.Errorf("got %s, want %s", b, want)
+	}
+	b, _ = Encode(QueueClearResult{OK: true})
+	for _, k := range []string{`"skipped":0`, `"empty":false`} {
+		if !strings.Contains(string(b), k) {
+			t.Errorf("zero values must be written: %s lacks %s", b, k)
+		}
+	}
+}

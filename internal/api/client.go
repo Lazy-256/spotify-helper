@@ -28,6 +28,9 @@ type Client struct {
 	Tokens TokenSource
 	Gate   *ratelimit.Gate
 	Now    func() time.Time
+	// SettleDelay is the wait between the queue reads that queue-clear makes to
+	// see a queue that has stopped changing; zero means the default.
+	SettleDelay time.Duration
 }
 
 const maxResponse = 8 << 20

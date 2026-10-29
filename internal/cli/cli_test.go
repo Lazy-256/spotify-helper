@@ -30,6 +30,7 @@ func testEnv(t *testing.T) (*Env, *bytes.Buffer, *bytes.Buffer) {
 		AccountsBase: defaultAccountsBase,
 		CoverHTTP:    &http.Client{Timeout: 5 * time.Second},
 		OpenBrowser:  func(string) error { return nil },
+		SettleDelay:  time.Nanosecond,
 	}, &out, &errb
 }
 

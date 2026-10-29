@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
+	"time"
 
 	"github.com/Lazy-256/spotify-helper/internal/output"
 	"github.com/Lazy-256/spotify-helper/internal/spotifyuri"
@@ -120,6 +122,183 @@ func (c *Client) QueueAddAll(ctx context.Context, u spotifyuri.URI, offset int, 
 			return res, nil
 		}
 	}
+}
+
+// MaxQueueClear caps the `next` requests one queue-clear run sends. It keeps a
+// run inside the rate window that 100 requests passed on a clean window; a
+// caller repeats the command for the rest.
+const MaxQueueClear = 100
+
+// QueueClear empties the queue as far as the Web API allows. The API cannot
+// remove entries, so it plays through them: it starts the current item again as
+// its own context (which drops the rest of the old context while the queued
+// entries stay), then sends one `next` per entry the queue really holds, reading
+// the queue between batches of at most 20, up to MaxQueueClear requests, and pauses
+// at the end, because every `next` starts an entry. A failure after the context
+// was dropped carries the number of `next` requests already sent in the error.
+func (c *Client) QueueClear(ctx context.Context, device string) (*output.QueueClearResult, error) {
+	st, err := c.State(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var current spotifyuri.URI
+	if st.Active && st.Item != nil {
+		current, err = spotifyuri.Parse(st.Item.URI)
+	}
+	if !st.Active || st.Item == nil || err != nil {
+		return nil, output.Errorf(output.CodeNoActiveDevice, "nothing is playing; start playback on a device or pass --device")
+	}
+	if err := c.PlayURI(ctx, current, device); err != nil {
+		return nil, err
+	}
+
+	res := &output.QueueClearResult{OK: true}
+	fail := func(err error, pause bool) error {
+		oe, ok := errors.AsType[*output.Error](err)
+		if !ok {
+			return err
+		}
+		// A rate limit or a lost connection would fail the pause the same way,
+		// and a failed pause is not tried again.
+		if pause && oe.Code != output.CodeRateLimited && oe.Code != output.CodeNetworkError {
+			_ = c.Pause(ctx, device)
+		}
+		if res.Skipped == 0 {
+			return err
+		}
+		cp := *oe
+		cp.Skipped = res.Skipped
+		return &cp
+	}
+
+	sent := false // `next` requests since the last queue read
+loop:
+	for {
+		// A device applies `next` late, so a read right after a batch can still show
+		// entries that are already used up; wait until two reads agree.
+		read := c.Queue
+		if sent {
+			read = c.settledQueue
+		}
+		q, err := read(ctx)
+		if err != nil {
+			return nil, fail(err, true)
+		}
+		real := withoutPadding(q)
+		if len(real) == 0 {
+			res.Empty = true
+			break
+		}
+		if res.Skipped >= MaxQueueClear {
+			break
+		}
+		for range min(len(real), MaxQueueClear-res.Skipped) {
+			for attempt := 0; ; attempt++ {
+				err := c.Next(ctx, device)
+				if err == nil {
+					break
+				}
+				if !isRefused(err) {
+					return nil, fail(err, true)
+				}
+				// Spotify refuses `next` when there is nothing to skip to, and also for a
+				// moment while the device changes track. It is the end of the queue only if
+				// the queue really holds nothing more; otherwise try again a few times.
+				q, qerr := c.settledQueue(ctx)
+				if qerr == nil && len(withoutPadding(q)) == 0 {
+					res.Empty = true
+					break loop
+				}
+				if attempt >= nextRetries {
+					return nil, fail(err, true)
+				}
+			}
+			res.Skipped++
+		}
+		sent = true
+	}
+	// A refused pause means no item is current: there is nothing to pause.
+	if err := c.Pause(ctx, device); err != nil && !isRefused(err) {
+		return nil, fail(err, false)
+	}
+	return res, nil
+}
+
+const (
+	queueSettleDelay = 250 * time.Millisecond
+	queueSettleReads = 4
+	// nextRetries is how many times a refused `next` is tried again while the
+	// queue still holds entries.
+	nextRetries = 3
+)
+
+// settledQueue reads the queue until two reads in a row agree (the item playing
+// and the entries), at most queueSettleReads more times, and returns the last one.
+func (c *Client) settledQueue(ctx context.Context) (*output.QueueResult, error) {
+	delay := c.SettleDelay
+	if delay == 0 {
+		delay = queueSettleDelay
+	}
+	prev, err := c.Queue(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for range queueSettleReads {
+		select {
+		case <-ctx.Done():
+			return nil, output.Network(ctx.Err())
+		case <-time.After(delay):
+		}
+		cur, err := c.Queue(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if sameQueue(prev, cur) {
+			return cur, nil
+		}
+		prev = cur
+	}
+	return prev, nil
+}
+
+func sameQueue(a, b *output.QueueResult) bool {
+	if (a.NowPlaying == nil) != (b.NowPlaying == nil) || len(a.Queue) != len(b.Queue) {
+		return false
+	}
+	if a.NowPlaying != nil && a.NowPlaying.URI != b.NowPlaying.URI {
+		return false
+	}
+	for i := range a.Queue {
+		if a.Queue[i].URI != b.Queue[i].URI {
+			return false
+		}
+	}
+	return true
+}
+
+// isRefused reports Spotify's HTTP 403 "Restriction violated", which it answers
+// to `next` and `pause` when no item is current or nothing follows.
+func isRefused(err error) bool {
+	oe, ok := errors.AsType[*output.Error](err)
+	return ok && oe.Code == output.CodeAPIError && strings.Contains(oe.Message, "HTTP 403")
+}
+
+// withoutPadding returns the queue entries that are really queued. Once the
+// queued entries are used up and the context is a single item, Spotify goes on
+// showing copies of the item playing now at the end of the queue (found live,
+// 2026-10-29); skipping them would never end, so a trailing run of entries
+// with the URI of the current item is dropped. A real entry that is the same
+// item as the current one and stands last is taken for padding too. Without a
+// current item nothing counts, because `next` would be refused.
+func withoutPadding(q *output.QueueResult) []output.Item {
+	items := q.Queue
+	if q.NowPlaying == nil {
+		return nil // no item is current: nothing can be skipped to
+	}
+	for len(items) > 0 && items[len(items)-1].URI == q.NowPlaying.URI {
+		items = items[:len(items)-1]
+	}
+	return items
 }
 
 // containerPage reads one page of the album or playlist u at pos and returns
