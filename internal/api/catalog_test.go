@@ -323,3 +323,48 @@ func TestPlayFromSendsContextAndOffset(t *testing.T) {
 		t.Errorf("err %v requests %d", err, n.Load())
 	}
 }
+
+const unplayableTracks = `{"total":3,"items":[
+  {"id":"t1","uri":"spotify:track:t1","name":"One","type":"track","is_playable":true},
+  {"id":"t2","uri":"spotify:track:t2","name":"Two","type":"track","is_playable":false},
+  {"id":"t3","uri":"spotify:track:t3","name":"Three","type":"track"}]}`
+
+func TestAlbumMarketFiltersOnlyMarkedFalse(t *testing.T) {
+	var seen []string
+	c, _, _ := newClient(t, albumRoutes(t, unplayableTracks, &seen))
+
+	res, err := c.Album(context.Background(), mustURI(t, "spotify:album:alb"), 10, 0)
+	if err != nil || len(res.Tracks) != 3 || strings.Contains(seen[1], "market") {
+		t.Fatalf("plain Album: %v %+v %v", err, res.Tracks, seen)
+	}
+
+	res, err = c.album(context.Background(), mustURI(t, "spotify:album:alb"), 10, 0, "from_token")
+	if err != nil || len(res.Tracks) != 2 || res.Tracks[0].ID != "t1" || res.Tracks[1].ID != "t3" {
+		t.Fatalf("album with market: %v %+v", err, res.Tracks)
+	}
+	if !strings.Contains(seen[3], "market=from_token") || strings.Contains(seen[2], "market") {
+		t.Errorf("requests: %v", seen)
+	}
+}
+
+func TestPlaylistMarketFiltersOnlyMarkedFalse(t *testing.T) {
+	var seen []string
+	entry := func(mark string) string {
+		return `{"is_local":false,"item":{"id":"t","uri":"spotify:track:t","name":"T","type":"track"` + mark + `}}`
+	}
+	items := `{"total":3,"items":[` + entry(`,"is_playable":true`) + `,` + entry(`,"is_playable":false`) + `,` + entry("") + `]}`
+	c, _, _ := newClient(t, playlistServer(t, playlistHead+`,"items":{"total":3}}`, items, 200, &seen))
+
+	res, err := c.Playlist(context.Background(), mustURI(t, "spotify:playlist:pl"), 50, 0)
+	if err != nil || len(res.Tracks) != 3 || strings.Contains(seen[1], "market") {
+		t.Fatalf("plain Playlist: %v %+v %v", err, res.Tracks, seen)
+	}
+
+	res, err = c.playlist(context.Background(), mustURI(t, "spotify:playlist:pl"), 50, 0, "from_token")
+	if err != nil || len(res.Tracks) != 2 {
+		t.Fatalf("playlist with market: %v %+v", err, res.Tracks)
+	}
+	if !strings.Contains(seen[3], "market=from_token") {
+		t.Errorf("requests: %v", seen)
+	}
+}

@@ -15,6 +15,13 @@ import (
 // page are simplified objects without an album of their own, so each gets the
 // album being read, and with it the album's cover.
 func (c *Client) Album(ctx context.Context, u spotifyuri.URI, limit, offset int) (*output.AlbumContents, error) {
+	return c.album(ctx, u, limit, offset, "")
+}
+
+// album is Album with an optional market: when set, the tracks request carries
+// it, which makes Spotify mark each track's is_playable, and tracks marked
+// false are left out.
+func (c *Client) album(ctx context.Context, u spotifyuri.URI, limit, offset int, market string) (*output.AlbumContents, error) {
 	var head wireAlbum
 	if _, err := c.do(ctx, http.MethodGet, "/albums/"+url.PathEscape(u.ID), nil, nil, &head); err != nil {
 		return nil, err
@@ -23,7 +30,11 @@ func (c *Client) Album(ctx context.Context, u spotifyuri.URI, limit, offset int)
 		Total int         `json:"total"`
 		Items []*wireItem `json:"items"`
 	}
-	if _, err := c.do(ctx, http.MethodGet, "/albums/"+url.PathEscape(u.ID)+"/tracks", pageQuery(limit, offset), nil, &page); err != nil {
+	q := pageQuery(limit, offset)
+	if market != "" {
+		q.Set("market", market)
+	}
+	if _, err := c.do(ctx, http.MethodGet, "/albums/"+url.PathEscape(u.ID)+"/tracks", q, nil, &page); err != nil {
 		return nil, err
 	}
 
@@ -35,7 +46,7 @@ func (c *Client) Album(ctx context.Context, u spotifyuri.URI, limit, offset int)
 		Limit:  limit,
 	}
 	for _, t := range page.Items {
-		if t == nil {
+		if t == nil || (market != "" && unplayable(t)) {
 			continue
 		}
 		if t.Type == "" {
@@ -92,6 +103,12 @@ type wirePlaylistDetail struct {
 	Tracks        json.RawMessage `json:"tracks"`
 }
 
+// unplayable reports whether Spotify explicitly marked w as not playable for
+// the user; an absent mark means playable.
+func unplayable(w *wireItem) bool {
+	return w.IsPlayable != nil && !*w.IsPlayable
+}
+
 func present(raw json.RawMessage) bool {
 	raw = bytes.TrimSpace(raw)
 	return len(raw) > 0 && !bytes.Equal(raw, []byte("null"))
@@ -111,6 +128,11 @@ type wirePlaylistEntry struct {
 // collaborates on: for any other playlist the answer has no items, or the
 // items request is refused with 403, and TracksAvailable is false.
 func (c *Client) Playlist(ctx context.Context, u spotifyuri.URI, limit, offset int) (*output.PlaylistContents, error) {
+	return c.playlist(ctx, u, limit, offset, "")
+}
+
+// playlist is Playlist with an optional market, used like in album.
+func (c *Client) playlist(ctx context.Context, u spotifyuri.URI, limit, offset int, market string) (*output.PlaylistContents, error) {
 	var head wirePlaylistDetail
 	if _, err := c.do(ctx, http.MethodGet, "/playlists/"+url.PathEscape(u.ID), nil, nil, &head); err != nil {
 		return nil, err
@@ -127,6 +149,9 @@ func (c *Client) Playlist(ctx context.Context, u spotifyuri.URI, limit, offset i
 
 	q := pageQuery(limit, offset)
 	q.Set("additional_types", "track,episode")
+	if market != "" {
+		q.Set("market", market)
+	}
 	var page struct {
 		Total int                  `json:"total"`
 		Items []*wirePlaylistEntry `json:"items"`
@@ -149,7 +174,7 @@ func (c *Client) Playlist(ctx context.Context, u spotifyuri.URI, limit, offset i
 		if w == nil {
 			w = e.Track
 		}
-		if w == nil || w.URI == "" {
+		if w == nil || w.URI == "" || (market != "" && unplayable(w)) {
 			continue
 		}
 		if it := mapItem(w); it != nil {

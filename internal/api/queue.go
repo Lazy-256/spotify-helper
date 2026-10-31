@@ -302,18 +302,19 @@ func withoutPadding(q *output.QueueResult) []output.Item {
 }
 
 // containerPage reads one page of the album or playlist u at pos and returns
-// the queueable items in order and the container's total. A playlist whose
+// the queueable items in order and the container's total. Tracks that Spotify
+// marks as not playable for the user are left out. A playlist whose
 // items Spotify does not serve fails with tracks_unavailable.
 func (c *Client) containerPage(ctx context.Context, u spotifyuri.URI, pos int) ([]output.Item, int, error) {
 	switch u.Type {
 	case spotifyuri.Album:
-		a, err := c.Album(ctx, u, queueAllPage, pos)
+		a, err := c.album(ctx, u, queueAllPage, pos, "from_token")
 		if err != nil {
 			return nil, 0, err
 		}
 		return a.Tracks, a.Total, nil
 	case spotifyuri.Playlist:
-		p, err := c.Playlist(ctx, u, queueAllPage, pos)
+		p, err := c.playlist(ctx, u, queueAllPage, pos, "from_token")
 		if err != nil {
 			return nil, 0, err
 		}

@@ -15,7 +15,9 @@ import (
 )
 
 // container is a fake album or playlist: "" is a null entry, "local" a local
-// file of a playlist, anything else a track id.
+// file of a playlist, "bad:<id>" a track marked is_playable false, "ok:<id>" a
+// track marked true, anything else a track id without the mark. Like Spotify,
+// it sends the mark only when the request carries a market.
 type container struct {
 	playlist bool
 	entries  []string
@@ -26,6 +28,7 @@ type container struct {
 	mu       sync.Mutex
 	posted   []string
 	pages    []string // "path?offset" of every page read
+	markets  []string // market parameter of every page read
 	inflight atomic.Int32
 	overlap  atomic.Bool
 }
@@ -63,11 +66,12 @@ func (f *container) handler(t *testing.T) http.HandlerFunc {
 			offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 			f.mu.Lock()
 			f.pages = append(f.pages, r.URL.Path+"?"+strconv.Itoa(offset))
+			f.markets = append(f.markets, r.URL.Query().Get("market"))
 			f.mu.Unlock()
 			end := min(offset+limit, len(f.entries))
 			var items []string
 			for i := min(offset, end); i < end; i++ {
-				items = append(items, f.wire(f.entries[i]))
+				items = append(items, f.wire(f.entries[i], r.URL.Query().Get("market") != ""))
 			}
 			jsonReply(w, 200, fmt.Sprintf(`{"total":%d,"items":[%s]}`, len(f.entries), strings.Join(items, ",")))
 		default:
@@ -77,9 +81,18 @@ func (f *container) handler(t *testing.T) http.HandlerFunc {
 	}
 }
 
-func (f *container) wire(e string) string {
+func (f *container) wire(e string, market bool) string {
 	track := func(id string) string {
-		return fmt.Sprintf(`{"id":%q,"uri":"spotify:track:%s","name":"N","type":"track","artists":[]}`, id, id)
+		mark := ""
+		if m, ok := strings.CutPrefix(id, "bad:"); ok {
+			id, mark = m, `,"is_playable":false`
+		} else if m, ok := strings.CutPrefix(id, "ok:"); ok {
+			id, mark = m, `,"is_playable":true`
+		}
+		if !market {
+			mark = ""
+		}
+		return fmt.Sprintf(`{"id":%q,"uri":"spotify:track:%s","name":"N","type":"track","artists":[]%s}`, id, id, mark)
 	}
 	switch {
 	case e == "" && !f.playlist:
@@ -285,5 +298,77 @@ func TestQueueAddAllRejectsOtherTypes(t *testing.T) {
 	_, err := c.QueueAddAll(context.Background(), mustURI(t, "spotify:artist:x"), 0, "")
 	if oe := asErr(t, err); oe.Code != output.CodeUsage || n.Load() != 0 {
 		t.Errorf("err %+v requests %d", oe, n.Load())
+	}
+}
+
+func TestQueueAddAllSkipsUnplayableTracks(t *testing.T) {
+	f := &container{entries: []string{"a", "b", "bad:c", "ok:d", "e", "f", "g"}}
+	c, _, _ := newClient(t, f.handler(t))
+	res, err := c.QueueAddAll(context.Background(), mustURI(t, "spotify:album:alb"), 0, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := output.QueueAddAllResult{OK: true, URI: "spotify:album:alb", Added: 6, Skipped: 1, Total: 7}
+	if *res != want {
+		t.Errorf("got %+v, want %+v", *res, want)
+	}
+	if !sameStrings(f.posted, uris("a", "b", "d", "e", "f", "g")) {
+		t.Errorf("posted %v", f.posted)
+	}
+	if !sameStrings(f.markets, []string{"from_token"}) {
+		t.Errorf("markets %v", f.markets)
+	}
+}
+
+func TestQueueAddAllPlaylistCountsUnplayableAndLocal(t *testing.T) {
+	f := &container{playlist: true, entries: []string{"a", "bad:b", "local", "c"}}
+	c, _, _ := newClient(t, f.handler(t))
+	res, err := c.QueueAddAll(context.Background(), mustURI(t, "spotify:playlist:pl"), 0, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Added != 2 || res.Skipped != 2 || res.Total != 4 || res.Truncated {
+		t.Errorf("got %+v", *res)
+	}
+	if !sameStrings(f.posted, uris("a", "c")) {
+		t.Errorf("posted %v", f.posted)
+	}
+}
+
+func TestQueueAddAllUnplayableDoNotUseUpTheCap(t *testing.T) {
+	e := tracks(130)
+	for _, i := range []int{3, 20, 44, 71, 90} {
+		e[i] = "bad:" + e[i]
+	}
+	f := &container{playlist: true, entries: e}
+	c, _, _ := newClient(t, f.handler(t))
+	res, err := c.QueueAddAll(context.Background(), mustURI(t, "spotify:playlist:pl"), 0, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Added != 100 || !res.Truncated || res.Skipped != 5 {
+		t.Errorf("got %+v", *res)
+	}
+	if len(f.posted) != 100 || f.posted[3] != "spotify:track:t4" || f.posted[99] != "spotify:track:t104" {
+		t.Errorf("posted %d, first %v", len(f.posted), f.posted[:5])
+	}
+}
+
+func TestQueueAddAllPageOfOnlyUnplayableContinues(t *testing.T) {
+	e := make([]string, 50, 53)
+	for i := range e {
+		e[i] = "bad:u" + strconv.Itoa(i)
+	}
+	f := &container{entries: append(e, "a", "b", "c")}
+	c, _, _ := newClient(t, f.handler(t))
+	res, err := c.QueueAddAll(context.Background(), mustURI(t, "spotify:album:alb"), 0, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Added != 3 || res.Skipped != 50 || res.Total != 53 || res.Truncated {
+		t.Errorf("got %+v", *res)
+	}
+	if len(f.pages) != 2 {
+		t.Errorf("pages %v", f.pages)
 	}
 }

@@ -231,3 +231,37 @@ func TestQueueAddAllHelp(t *testing.T) {
 		t.Errorf("help %q", got)
 	}
 }
+
+func TestQueueAddAllSkipsUnplayableAndAsksForMarket(t *testing.T) {
+	env, f, out, errb := spotifyEnv(t)
+	f.reply("GET /albums/alb", 200, `{"id":"alb","uri":"spotify:album:alb","name":"A","total_tracks":3,"artists":[],"images":[]}`)
+	f.reply("GET /albums/alb/tracks", 200, `{"total":3,"items":[
+	  {"id":"t1","uri":"spotify:track:t1","name":"S","artists":[],"is_playable":true},
+	  {"id":"t2","uri":"spotify:track:t2","name":"S","artists":[],"is_playable":false},
+	  {"id":"t3","uri":"spotify:track:t3","name":"S","artists":[],"is_playable":true}]}`)
+	f.reply("POST /me/player/queue", 204, "")
+	got := parse(t, runOK(t, env, out, errb, "queue-add-all", "spotify:album:alb"))
+	if got["added"] != 2.0 || got["skipped"] != 1.0 || got["total"] != 3.0 {
+		t.Errorf("output %v", got)
+	}
+	if posted := postedURIs(f); len(posted) != 2 || posted[0] != "spotify:track:t1" || posted[1] != "spotify:track:t3" {
+		t.Errorf("posted %v", posted)
+	}
+	if m := f.callsTo("GET /albums/alb/tracks")[0].Query.Get("market"); m != "from_token" {
+		t.Errorf("market = %q", m)
+	}
+}
+
+func TestAlbumAndPlaylistCommandsSendNoMarket(t *testing.T) {
+	env, f, out, errb := spotifyEnv(t)
+	albumFixtures(f, 2, "")
+	playlistFixtures(f, 2, -1)
+	runOK(t, env, out, errb, "album", "spotify:album:alb")
+	out.Reset()
+	runOK(t, env, out, errb, "playlist", "spotify:playlist:pl")
+	for _, route := range []string{"GET /albums/alb/tracks", "GET /playlists/pl/items"} {
+		if c := f.callsTo(route); len(c) != 1 || c[0].Query.Has("market") {
+			t.Errorf("%s: %+v", route, c)
+		}
+	}
+}

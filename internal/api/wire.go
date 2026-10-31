@@ -40,6 +40,7 @@ type wireItem struct {
 	Name       string       `json:"name"`
 	DurationMS int64        `json:"duration_ms"`
 	Explicit   bool         `json:"explicit"`
+	IsPlayable *bool        `json:"is_playable"` // set only when the request has a market
 	Artists    []wireArtist `json:"artists"`
 	Album      *wireAlbum   `json:"album"`  // tracks
 	Show       *wireShow    `json:"show"`   // episodes
