@@ -43,7 +43,7 @@ The helper SHALL NOT provide commands to remove or reorder single queue entries,
 - **THEN** the command exits 2 with `error.code` `usage`
 
 ### Requirement: Add a whole album or playlist to the queue
-`spotify-helper queue-add-all <uri>` SHALL append the tracks and episodes of an album or a playlist to the queue of the active device (or of `--device <id>` when given), one request per item, strictly in the order of the container and without parallel requests. Only `spotify:album:` and `spotify:playlist:` URIs, or the equivalent `https://open.spotify.com/album/<id>` and `/playlist/<id>` links, SHALL be accepted; any other value, including track, episode and artist URIs, SHALL fail with `usage` before anything is sent. `--offset <n>` (an integer ≥ 0, default 0, otherwise `usage`) SHALL start at that position of the container as Spotify numbers it. The command SHALL read the container in pages of 50 and SHALL queue at most 100 items per run. It SHALL output `{"ok":true,"uri":"<normalized-uri>","added":<n>,"skipped":<n>,"total":<n>,"offset":<n>,"truncated":<bool>}` where `total` is the number of items Spotify reports for the container, `added` the number queued, `skipped` the number of examined entries that cannot be queued (local files, removed or unavailable entries without a URI), and `truncated` is true exactly when the run stopped at the cap with entries left unexamined. A container with nothing to queue from `offset` on SHALL succeed with `added` 0.
+`spotify-helper queue-add-all <uri>` SHALL append the tracks and episodes of an album or a playlist to the queue of the active device (or of `--device <id>` when given), one request per item, strictly in the order of the container and without parallel requests. Only `spotify:album:` and `spotify:playlist:` URIs, or the equivalent `https://open.spotify.com/album/<id>` and `/playlist/<id>` links, SHALL be accepted; any other value, including track, episode and artist URIs, SHALL fail with `usage` before anything is sent. `--offset <n>` (an integer ≥ 0, default 0, otherwise `usage`) SHALL start at that position of the container as Spotify numbers it. The command SHALL read the container for the user's market, so that Spotify says which tracks are playable, and SHALL NOT send a track that Spotify marks as not playable; a track without that mark SHALL be treated as playable. The command SHALL read the container in pages of 50 and SHALL queue at most 100 items per run. It SHALL output `{"ok":true,"uri":"<normalized-uri>","added":<n>,"skipped":<n>,"total":<n>,"offset":<n>,"truncated":<bool>}` where `total` is the number of items Spotify reports for the container, `added` the number queued, `skipped` the number of examined entries that cannot be queued (local files, removed or unavailable entries without a URI, and tracks that Spotify marks as not playable for the user, for example explicit tracks when the account filters explicit content), and `truncated` is true exactly when the run stopped at the cap with entries left unexamined. A container with nothing to queue from `offset` on SHALL succeed with `added` 0.
 
 #### Scenario: A whole album
 - **WHEN** the user runs `queue-add-all spotify:album:abc` for an album of 12 tracks while playing
@@ -60,6 +60,18 @@ The helper SHALL NOT provide commands to remove or reorder single queue entries,
 #### Scenario: Local files and gaps
 - **WHEN** 3 entries of the examined range are local files
 - **THEN** they are not sent to Spotify and the output's `skipped` is 3
+
+#### Scenario: Unplayable tracks
+- **WHEN** 1 track of a 7-track album is marked as not playable for the user
+- **THEN** 6 add-to-queue requests are sent, in album order, and the output has `added` 6, `skipped` 1 and `total` 7
+
+#### Scenario: Unplayable tracks do not use up the cap
+- **WHEN** a playlist of 130 items has 5 not playable tracks among its first 100 entries
+- **THEN** exactly 100 playable items are queued, in playlist order, and `truncated` is true
+
+#### Scenario: Tracks without a playable mark
+- **WHEN** Spotify gives no playable mark for a track
+- **THEN** the track is queued as before
 
 #### Scenario: A web link
 - **WHEN** the user runs `queue-add-all https://open.spotify.com/playlist/abc?si=xyz`
