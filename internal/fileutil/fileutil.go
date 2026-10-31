@@ -6,7 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+	"time"
 )
+
+// staleTemp is how old a leftover temporary file must be before WriteAtomic
+// removes it; a younger one may belong to a write that is still running.
+const staleTemp = time.Hour
 
 // WriteAtomic replaces path with data. The bytes go to a temporary file in the
 // same directory (created with mode perm) which is then renamed over path, so
@@ -17,6 +22,7 @@ func WriteAtomic(path string, data []byte, perm, dirPerm os.FileMode) error {
 	if err := os.MkdirAll(dir, dirPerm); err != nil {
 		return err
 	}
+	removeStaleTemps(dir, "."+filepath.Base(path)+".tmp-*")
 	tmp, err := os.CreateTemp(dir, "."+filepath.Base(path)+".tmp-*")
 	if err != nil {
 		return err
@@ -68,4 +74,15 @@ func Lock(path string, dirPerm os.FileMode) (unlock func(), err error) {
 		_ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
 		_ = f.Close()
 	}, nil
+}
+
+// removeStaleTemps deletes temporary files that a crashed WriteAtomic left in
+// dir (they may hold a copy of a token). Failures are ignored: it is tidying.
+func removeStaleTemps(dir, pattern string) {
+	old, _ := filepath.Glob(filepath.Join(dir, pattern))
+	for _, f := range old {
+		if fi, err := os.Stat(f); err == nil && time.Since(fi.ModTime()) > staleTemp {
+			_ = os.Remove(f)
+		}
+	}
 }

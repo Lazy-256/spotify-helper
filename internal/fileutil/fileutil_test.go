@@ -79,3 +79,33 @@ func TestLockIsExclusive(t *testing.T) {
 		t.Errorf("%d holders at once, want 1", maxInside)
 	}
 }
+
+func TestWriteAtomicRemovesStaleTemps(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "token.json")
+	stale := filepath.Join(dir, ".token.json.tmp-old")
+	fresh := filepath.Join(dir, ".token.json.tmp-new")
+	other := filepath.Join(dir, ".other.json.tmp-old")
+	for _, f := range []string{stale, fresh, other} {
+		if err := os.WriteFile(f, []byte("x"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	old := time.Now().Add(-2 * time.Hour)
+	for _, f := range []string{stale, other} {
+		if err := os.Chtimes(f, old, old); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := WriteAtomic(path, []byte("one"), 0o600, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(stale); err == nil {
+		t.Error("the stale temporary file of this target was kept")
+	}
+	for _, f := range []string{fresh, other} {
+		if _, err := os.Stat(f); err != nil {
+			t.Errorf("%s must stay: %v", filepath.Base(f), err)
+		}
+	}
+}
