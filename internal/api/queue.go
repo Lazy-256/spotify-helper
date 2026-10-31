@@ -136,7 +136,7 @@ const MaxQueueClear = 100
 // the queue between batches of at most 20, up to MaxQueueClear requests, and pauses
 // at the end, because every `next` starts an entry. A failure after the context
 // was dropped carries the number of `next` requests already sent in the error.
-func (c *Client) QueueClear(ctx context.Context, device string) (*output.QueueClearResult, error) {
+func (c *Client) QueueClear(ctx context.Context) (*output.QueueClearResult, error) {
 	st, err := c.State(ctx)
 	if err != nil {
 		return nil, err
@@ -146,9 +146,9 @@ func (c *Client) QueueClear(ctx context.Context, device string) (*output.QueueCl
 		current, err = spotifyuri.Parse(st.Item.URI)
 	}
 	if !st.Active || st.Item == nil || err != nil {
-		return nil, output.Errorf(output.CodeNoActiveDevice, "nothing is playing; start playback on a device or pass --device")
+		return nil, output.Errorf(output.CodeNoActiveDevice, "nothing is playing; start playback on a device")
 	}
-	if err := c.PlayURI(ctx, current, device); err != nil {
+	if err := c.PlayURI(ctx, current, ""); err != nil {
 		return nil, err
 	}
 
@@ -161,7 +161,7 @@ func (c *Client) QueueClear(ctx context.Context, device string) (*output.QueueCl
 		// A rate limit or a lost connection would fail the pause the same way,
 		// and a failed pause is not tried again.
 		if pause && oe.Code != output.CodeRateLimited && oe.Code != output.CodeNetworkError {
-			_ = c.Pause(ctx, device)
+			_ = c.Pause(ctx, "")
 		}
 		if res.Skipped == 0 {
 			return err
@@ -194,7 +194,7 @@ loop:
 		}
 		for range min(len(real), MaxQueueClear-res.Skipped) {
 			for attempt := 0; ; attempt++ {
-				err := c.Next(ctx, device)
+				err := c.Next(ctx, "")
 				if err == nil {
 					break
 				}
@@ -218,7 +218,7 @@ loop:
 		sent = true
 	}
 	// A refused pause means no item is current: there is nothing to pause.
-	if err := c.Pause(ctx, device); err != nil && !isRefused(err) {
+	if err := c.Pause(ctx, ""); err != nil && !isRefused(err) {
 		return nil, fail(err, false)
 	}
 	return res, nil

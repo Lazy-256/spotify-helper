@@ -142,7 +142,7 @@ func (p *player) count(prefix string) int {
 func TestQueueClearQueueOfThree(t *testing.T) {
 	p := &player{queued: 3}
 	c, _, _ := newClient(t, p.handler(t))
-	res, err := c.QueueClear(context.Background(), "")
+	res, err := c.QueueClear(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +173,7 @@ func TestQueueClearQueueOfThree(t *testing.T) {
 func TestQueueClearEmptyQueue(t *testing.T) {
 	p := &player{}
 	c, _, _ := newClient(t, p.handler(t))
-	res, err := c.QueueClear(context.Background(), "")
+	res, err := c.QueueClear(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,7 +188,7 @@ func TestQueueClearEmptyQueue(t *testing.T) {
 func TestQueueClearOverTheCap(t *testing.T) {
 	p := &player{queued: 250}
 	c, _, _ := newClient(t, p.handler(t))
-	res, err := c.QueueClear(context.Background(), "")
+	res, err := c.QueueClear(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +222,7 @@ func TestQueueClearOverTheCap(t *testing.T) {
 func TestQueueClearExactlyAtTheCapIsEmpty(t *testing.T) {
 	p := &player{queued: 100}
 	c, _, _ := newClient(t, p.handler(t))
-	res, err := c.QueueClear(context.Background(), "")
+	res, err := c.QueueClear(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,7 +235,7 @@ func TestQueueClearNothingPlaying(t *testing.T) {
 	for name, p := range map[string]*player{"no device": {inactive: true, queued: 2}, "no item": {noItem: true, queued: 2}} {
 		t.Run(name, func(t *testing.T) {
 			c, _, _ := newClient(t, p.handler(t))
-			_, err := c.QueueClear(context.Background(), "")
+			_, err := c.QueueClear(context.Background())
 			oe := asErr(t, err)
 			if oe.Code != output.CodeNoActiveDevice || oe.Skipped != 0 {
 				t.Errorf("got %+v", *oe)
@@ -250,7 +250,7 @@ func TestQueueClearNothingPlaying(t *testing.T) {
 func TestQueueClearRateLimitedInTheMiddle(t *testing.T) {
 	p := &player{queued: 60, failNext: 31}
 	c, _, _ := newClient(t, p.handler(t))
-	_, err := c.QueueClear(context.Background(), "")
+	_, err := c.QueueClear(context.Background())
 	oe := asErr(t, err)
 	if oe.Code != output.CodeRateLimited || oe.RetryAfter != 12 || oe.Skipped != 30 {
 		t.Errorf("got %+v", *oe)
@@ -268,7 +268,7 @@ func TestQueueClearCooldownSendsNothing(t *testing.T) {
 	c, n, _ := newClient(t, p.handler(t))
 	c.Gate.Record("30")
 	before := n.Load()
-	_, err := c.QueueClear(context.Background(), "")
+	_, err := c.QueueClear(context.Background())
 	oe := asErr(t, err)
 	if oe.Code != output.CodeRateLimited || oe.Skipped != 0 || n.Load() != before {
 		t.Errorf("got %+v, requests %d", *oe, n.Load()-before)
@@ -278,7 +278,7 @@ func TestQueueClearCooldownSendsNothing(t *testing.T) {
 func TestQueueClearPauseFailureIsReported(t *testing.T) {
 	p := &player{queued: 2, pauseStatus: 500}
 	c, _, _ := newClient(t, p.handler(t))
-	_, err := c.QueueClear(context.Background(), "")
+	_, err := c.QueueClear(context.Background())
 	oe := asErr(t, err)
 	if oe.Code != output.CodeAPIError || !strings.Contains(oe.Message, "500") || oe.Skipped != 2 {
 		t.Errorf("got %+v", *oe)
@@ -288,26 +288,12 @@ func TestQueueClearPauseFailureIsReported(t *testing.T) {
 	}
 }
 
-func TestQueueClearPassesTheDevice(t *testing.T) {
-	p := &player{queued: 2}
-	c, _, _ := newClient(t, p.handler(t))
-	if _, err := c.QueueClear(context.Background(), "D1"); err != nil {
-		t.Fatal(err)
-	}
-	for i, l := range p.log {
-		takesDevice := strings.HasPrefix(l, "PUT /me/player/play") || strings.HasPrefix(l, "POST /me/player/next") || strings.HasPrefix(l, "PUT /me/player/pause")
-		if takesDevice && p.devices[i] != "D1" {
-			t.Errorf("%s lacks the device id (%q)", l, p.devices[i])
-		}
-	}
-}
-
 func TestQueueClearPaddingIsNotQueued(t *testing.T) {
 	// After the queued entries are used up Spotify shows copies of the current
 	// item and refuses `next`; the run must stop on its own with a success.
 	p := &player{queued: 3, padding: true}
 	c, _, _ := newClient(t, p.handler(t))
-	res, err := c.QueueClear(context.Background(), "")
+	res, err := c.QueueClear(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -325,7 +311,7 @@ func TestQueueClearPaddingIsNotQueued(t *testing.T) {
 func TestQueueClearOnlyPadding(t *testing.T) {
 	p := &player{padding: true}
 	c, _, _ := newClient(t, p.handler(t))
-	res, err := c.QueueClear(context.Background(), "")
+	res, err := c.QueueClear(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -363,7 +349,7 @@ func TestQueueClearWaitsForALateDevice(t *testing.T) {
 	// counting from it would send a `next` past the end and stop the player.
 	p := &player{queued: 5, lag: true}
 	c, _, _ := newClient(t, p.handler(t))
-	res, err := c.QueueClear(context.Background(), "")
+	res, err := c.QueueClear(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -377,7 +363,7 @@ func TestQueueClearRefusedNextAtTheEndIsTheEnd(t *testing.T) {
 	// the queue then holds nothing, so the run ended normally.
 	p := &player{queued: 3, phantom: 2}
 	c, _, _ := newClient(t, p.handler(t))
-	res, err := c.QueueClear(context.Background(), "")
+	res, err := c.QueueClear(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -402,7 +388,7 @@ func TestQueueClearRefusedNextWithEntriesLeftIsAnError(t *testing.T) {
 		}
 		p.handler(t)(w, r)
 	})
-	_, err := c.QueueClear(context.Background(), "")
+	_, err := c.QueueClear(context.Background())
 	oe := asErr(t, err)
 	if oe.Code != output.CodeAPIError || oe.Skipped != 2 {
 		t.Errorf("got %+v", *oe)
@@ -427,7 +413,7 @@ func TestQueueClearRetriesATransientRefusal(t *testing.T) {
 		}
 		p.handler(t)(w, r)
 	})
-	res, err := c.QueueClear(context.Background(), "")
+	res, err := c.QueueClear(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -440,7 +426,7 @@ func TestQueueClearPauseRefusedWhenNothingPlays(t *testing.T) {
 	// A refused final pause (no current item) is silence, not a failure.
 	p := &player{queued: 2, pauseStatus: 403}
 	c, _, _ := newClient(t, p.handler(t))
-	res, err := c.QueueClear(context.Background(), "")
+	res, err := c.QueueClear(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

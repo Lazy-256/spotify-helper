@@ -86,19 +86,12 @@ func TestQueueClearEmptyQueue(t *testing.T) {
 	}
 }
 
-func TestQueueClearOverTheCapAndDevice(t *testing.T) {
+func TestQueueClearOverTheCap(t *testing.T) {
 	env, f, out, errb := spotifyEnv(t)
 	clearFixtures(f, 250)
-	got := parse(t, runOK(t, env, out, errb, "queue-clear", "--device", "D1"))
+	got := parse(t, runOK(t, env, out, errb, "queue-clear"))
 	if got["skipped"] != 100.0 || got["empty"] != false {
 		t.Errorf("output %v", got)
-	}
-	for _, route := range []string{"PUT /me/player/play", "POST /me/player/next", "PUT /me/player/pause"} {
-		for _, c := range f.callsTo(route) {
-			if c.Query.Get("device_id") != "D1" {
-				t.Errorf("%s lacks the device id: %v", route, c.Query)
-			}
-		}
 	}
 }
 
@@ -106,6 +99,7 @@ func TestQueueClearUsageErrors(t *testing.T) {
 	for _, args := range [][]string{
 		{"queue-clear", "spotify:track:abc"},
 		{"queue-clear", "--offset", "3"},
+		{"queue-clear", "--device", "D1"},
 	} {
 		env, f, out, errb := spotifyEnv(t)
 		runFail(t, env, out, errb, 2, "usage", args...)
